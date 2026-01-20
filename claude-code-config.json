@@ -1,0 +1,12 @@
+{
+  "project_name": "aurea",
+  "description": "Personal ingredient predictor app",
+  "github_repo": "https://github.com/baytechie/aurea",
+  "directories": {
+    "frontend": "./frontend",
+    "backend": "./backend"
+  },
+  "autonomous_mode": true,
+  "max_iterations": 10,
+  "auto_fix": true
+}
