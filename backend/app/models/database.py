@@ -22,6 +22,21 @@ from sqlalchemy.orm import relationship
 import json
 
 from app.core.database import Base
+from app.core.config import settings
+
+# Use String for UUID in SQLite, native UUID for PostgreSQL
+if settings.DATABASE_URL.startswith("sqlite"):
+    from sqlalchemy import String as UUIDType
+    def uuid_column(**kwargs):
+        return Column(String(36), default=lambda: str(uuid.uuid4()), **kwargs)
+    def uuid_fk_column(fk, **kwargs):
+        return Column(String(36), ForeignKey(fk), **kwargs)
+else:
+    from sqlalchemy.dialects.postgresql import UUID
+    def uuid_column(**kwargs):
+        return Column(UUID(as_uuid=True), default=uuid.uuid4, **kwargs)
+    def uuid_fk_column(fk, **kwargs):
+        return Column(UUID(as_uuid=True), ForeignKey(fk), **kwargs)
 
 
 def utc_now():

@@ -23,7 +23,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
-        <BrowserRouter>
+        <BrowserRouter basename="/aurea">
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<HomePage />} />

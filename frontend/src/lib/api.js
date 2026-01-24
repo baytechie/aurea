@@ -1,18 +1,7 @@
 import axios from 'axios';
 
-// Dynamically determine API URL based on current hostname
-// This allows the app to work from localhost and from network devices
-const getApiBaseUrl = () => {
-  // Check for environment variable first
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
-  }
-  // Use same hostname as frontend but with port 8000
-  const hostname = window.location.hostname;
-  return `http://${hostname}:8000`;
-};
-
-const API_BASE_URL = getApiBaseUrl();
+// Use environment variable or default to /backend for nginx proxy
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/backend';
 
 // Create axios instance with default config
 const api = axios.create({
@@ -43,7 +32,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('aurea_token');
       localStorage.removeItem('aurea_user');
-      window.location.href = '/login';
+      window.location.href = '/aurea/login';
     }
     return Promise.reject(error);
   }

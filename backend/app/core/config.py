@@ -19,8 +19,7 @@ class Settings(BaseSettings):
     DEBUG: bool = True  # Enable debug for detailed error messages
     ENVIRONMENT: str = "development"
 
-    # Database
-    # Default to SQLite for local development, use PostgreSQL in production
+    # Database (SQLite for local dev, PostgreSQL for production)
     DATABASE_URL: str = "sqlite:///./aurea.db"
 
     # JWT Authentication

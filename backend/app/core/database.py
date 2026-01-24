@@ -10,18 +10,14 @@ from typing import Generator
 
 from .config import settings
 
-# Determine if using SQLite
-is_sqlite = settings.DATABASE_URL.startswith("sqlite")
-
-# Create SQLAlchemy engine with appropriate settings
-if is_sqlite:
-    # SQLite configuration
+# Create SQLAlchemy engine
+# Use different settings for SQLite vs PostgreSQL
+if settings.DATABASE_URL.startswith("sqlite"):
     engine = create_engine(
         settings.DATABASE_URL,
         connect_args={"check_same_thread": False}
     )
 else:
-    # PostgreSQL configuration
     engine = create_engine(
         settings.DATABASE_URL,
         pool_pre_ping=True,
