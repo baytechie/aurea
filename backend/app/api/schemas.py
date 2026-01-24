@@ -2,8 +2,8 @@
 Pydantic schemas for request/response validation.
 """
 
-from pydantic import BaseModel, EmailStr, Field
-from typing import Optional, List, Dict, Any
+from pydantic import BaseModel, EmailStr, Field, field_validator
+from typing import Optional, List, Dict, Any, Union
 from datetime import date, datetime
 from uuid import UUID
 
@@ -42,6 +42,33 @@ class UserResponse(BaseModel):
 
 
 # ============================================================
+# User Profile Schemas
+# ============================================================
+
+class UserProfileUpdate(BaseModel):
+    """Schema for updating user profile."""
+    name: Optional[str] = Field(None, max_length=100)
+    bio: Optional[str] = None
+    profile_picture_url: Optional[str] = Field(None, max_length=500)
+    cycle_enabled: Optional[bool] = None
+
+
+class UserProfileResponse(BaseModel):
+    """Schema for user profile response (includes profile fields)."""
+    id: UUID
+    email: str
+    name: Optional[str] = None
+    bio: Optional[str] = None
+    profile_picture_url: Optional[str] = None
+    cycle_enabled: bool = False
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+# ============================================================
 # Ingredient Schemas
 # ============================================================
 
@@ -60,6 +87,19 @@ class IngredientScoreResponse(BaseModel):
         from_attributes = True
 
 
+class IngredientSearchResult(BaseModel):
+    """Schema for a single ingredient search result."""
+    ingredient_name: str
+    match_score: float
+    category: Optional[str] = None
+
+
+class IngredientSearchResponse(BaseModel):
+    """Schema for ingredient search response."""
+    results: List[IngredientSearchResult]
+    total: int
+
+
 # ============================================================
 # Log Schemas
 # ============================================================
@@ -73,6 +113,18 @@ class SymptomsInput(BaseModel):
     sleep: int = Field(..., ge=0, le=5)
 
 
+class SymptomsOutput(BaseModel):
+    """Schema for symptom ratings in responses.
+
+    Handles both new column-based symptoms and legacy JSON symptoms.
+    """
+    energy: Optional[int] = Field(None, ge=0, le=5)
+    bloating: Optional[int] = Field(None, ge=0, le=5)
+    focus: Optional[int] = Field(None, ge=0, le=5)
+    mood: Optional[int] = Field(None, ge=0, le=5)
+    sleep: Optional[int] = Field(None, ge=0, le=5)
+
+
 class LogCreate(BaseModel):
     """Schema for creating a daily log."""
     date: Optional[date] = None  # Defaults to today if not provided
@@ -80,13 +132,38 @@ class LogCreate(BaseModel):
     symptoms: SymptomsInput
     cycle_phase: Optional[str] = None
 
+    @field_validator('cycle_phase')
+    @classmethod
+    def validate_cycle_phase(cls, v):
+        """Validate cycle phase value."""
+        valid_phases = ['menstruation', 'follicular', 'ovulation', 'luteal', None]
+        if v is not None and v not in valid_phases:
+            raise ValueError(f"cycle_phase must be one of: {valid_phases[:-1]}")
+        return v
+
+
+class LogUpdate(BaseModel):
+    """Schema for updating a daily log (partial update)."""
+    ingredients: Optional[List[str]] = None
+    symptoms: Optional[SymptomsInput] = None
+    cycle_phase: Optional[str] = None
+
+    @field_validator('cycle_phase')
+    @classmethod
+    def validate_cycle_phase(cls, v):
+        """Validate cycle phase value."""
+        valid_phases = ['menstruation', 'follicular', 'ovulation', 'luteal', None]
+        if v is not None and v not in valid_phases:
+            raise ValueError(f"cycle_phase must be one of: {valid_phases[:-1]}")
+        return v
+
 
 class LogResponse(BaseModel):
     """Schema for log response."""
     id: UUID
     date: date
     ingredients: List[str]
-    symptoms: Dict[str, int]
+    symptoms: Union[SymptomsOutput, Dict[str, Optional[int]]]
     cycle_phase: Optional[str] = None
     created_at: datetime
 
@@ -108,6 +185,15 @@ class PredictionCreate(BaseModel):
     """Schema for requesting a prediction."""
     ingredients: List[str]
     cycle_phase: Optional[str] = None
+
+    @field_validator('cycle_phase')
+    @classmethod
+    def validate_cycle_phase(cls, v):
+        """Validate cycle phase value."""
+        valid_phases = ['menstruation', 'follicular', 'ovulation', 'luteal', None]
+        if v is not None and v not in valid_phases:
+            raise ValueError(f"cycle_phase must be one of: {valid_phases[:-1]}")
+        return v
 
 
 class PredictionResponse(BaseModel):
@@ -132,7 +218,7 @@ class PredictionListResponse(BaseModel):
 
 
 # ============================================================
-# Insights Schemas
+# User Insights Schemas
 # ============================================================
 
 class TriggerInfo(BaseModel):
@@ -140,15 +226,111 @@ class TriggerInfo(BaseModel):
     ingredient: str
     correlation: float
     affected_symptoms: List[str]
+    confidence_level: Optional[str] = None
+    sample_size: Optional[int] = None
+
+
+class PhasePatternInfo(BaseModel):
+    """Schema for cycle phase pattern info."""
+    phase: str
+    symptom: str
+    average_value: float
+    trend: Optional[str] = None  # 'increasing', 'decreasing', 'stable'
+
+
+class LagEffectInfo(BaseModel):
+    """Schema for lag effect info."""
+    ingredient: str
+    symptom: str
+    delay_hours: int
+    correlation: float
+
+
+class UserInsightCreate(BaseModel):
+    """Schema for creating a user insight (internal use)."""
+    insight_type: str = Field(..., pattern='^(trigger|phase_pattern|lag_effect|recommendation)$')
+    ingredient_name: Optional[str] = None
+    symptom_name: Optional[str] = None
+    correlation_score: Optional[float] = Field(None, ge=-1.0, le=1.0)
+    confidence_level: Optional[str] = Field(None, pattern='^(high|medium|low)$')
+    sample_size: Optional[int] = Field(None, ge=0)
+    p_value: Optional[float] = None
+    insight_data: Optional[Dict[str, Any]] = None
+    valid_from: date
+    valid_until: date
+
+
+class UserInsightResponse(BaseModel):
+    """Schema for user insight response."""
+    id: UUID
+    insight_type: str
+    ingredient_name: Optional[str] = None
+    symptom_name: Optional[str] = None
+    correlation_score: Optional[float] = None
+    confidence_level: Optional[str] = None
+    sample_size: Optional[int] = None
+    insight_data: Optional[Dict[str, Any]] = None
+    valid_from: date
+    valid_until: date
+    computed_at: datetime
+    is_active: bool
+
+    class Config:
+        from_attributes = True
+
+
+class UserInsightListResponse(BaseModel):
+    """Schema for list of user insights."""
+    insights: List[UserInsightResponse]
+    total: int
 
 
 class InsightsResponse(BaseModel):
-    """Schema for user insights response."""
+    """Schema for user insights response (aggregated view)."""
     top_triggers: List[TriggerInfo]
     phase_analysis: Optional[Dict[str, Any]] = None
     lag_analysis: Optional[Dict[str, Any]] = None
     confidence_assessment: Optional[str] = None
     recommendations: Optional[List[str]] = None
+    # Additional fields for new insight structure
+    phase_patterns: Optional[List[PhasePatternInfo]] = None
+    lag_effects: Optional[List[LagEffectInfo]] = None
+    data_summary: Optional[Dict[str, Any]] = None
+
+
+class InsightsSummary(BaseModel):
+    """Schema for a quick summary of user insights."""
+    total_triggers: int
+    top_trigger_ingredient: Optional[str] = None
+    top_trigger_correlation: Optional[float] = None
+    has_phase_patterns: bool = False
+    has_lag_effects: bool = False
+    last_computed_at: Optional[datetime] = None
+    confidence_level: Optional[str] = None
+
+
+# ============================================================
+# Analytics Schemas
+# ============================================================
+
+class SymptomAggregation(BaseModel):
+    """Schema for symptom aggregation data."""
+    period: str  # 'day', 'week', 'month'
+    date: date
+    avg_energy: Optional[float] = None
+    avg_bloating: Optional[float] = None
+    avg_focus: Optional[float] = None
+    avg_mood: Optional[float] = None
+    avg_sleep: Optional[float] = None
+    log_count: int
+
+
+class SymptomTrendResponse(BaseModel):
+    """Schema for symptom trend response."""
+    aggregations: List[SymptomAggregation]
+    period: str
+    start_date: date
+    end_date: date
 
 
 # ============================================================

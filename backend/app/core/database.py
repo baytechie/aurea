@@ -1,6 +1,6 @@
 """
 Database connection and session management.
-Uses SQLAlchemy async for PostgreSQL connections.
+Supports both SQLite (development) and PostgreSQL (production).
 """
 
 from sqlalchemy import create_engine
@@ -10,13 +10,24 @@ from typing import Generator
 
 from .config import settings
 
-# Create SQLAlchemy engine
-engine = create_engine(
-    settings.DATABASE_URL,
-    pool_pre_ping=True,
-    pool_size=5,
-    max_overflow=10
-)
+# Determine if using SQLite
+is_sqlite = settings.DATABASE_URL.startswith("sqlite")
+
+# Create SQLAlchemy engine with appropriate settings
+if is_sqlite:
+    # SQLite configuration
+    engine = create_engine(
+        settings.DATABASE_URL,
+        connect_args={"check_same_thread": False}
+    )
+else:
+    # PostgreSQL configuration
+    engine = create_engine(
+        settings.DATABASE_URL,
+        pool_pre_ping=True,
+        pool_size=5,
+        max_overflow=10
+    )
 
 # Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

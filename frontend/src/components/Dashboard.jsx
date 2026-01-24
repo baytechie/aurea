@@ -19,20 +19,20 @@ function Dashboard({ onNavigate }) {
           <div className="space-y-3">
             <button
               onClick={() => onNavigate('logger')}
-              className="w-full flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
+              className="w-full flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:border-primary-300 hover:bg-primary-50 transition-colors"
             >
               <div className="flex items-center gap-3">
-                <Calendar className="w-5 h-5 text-indigo-600" />
+                <Calendar className="w-5 h-5 text-primary-600" />
                 <span className="font-medium text-gray-900">Log Today's Meals</span>
               </div>
               <ArrowRight className="w-5 h-5 text-gray-400" />
             </button>
             <button
               onClick={() => onNavigate('search')}
-              className="w-full flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
+              className="w-full flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:border-primary-300 hover:bg-primary-50 transition-colors"
             >
               <div className="flex items-center gap-3">
-                <TrendingUp className="w-5 h-5 text-indigo-600" />
+                <TrendingUp className="w-5 h-5 text-primary-600" />
                 <span className="font-medium text-gray-900">Search Ingredients</span>
               </div>
               <ArrowRight className="w-5 h-5 text-gray-400" />
@@ -45,7 +45,7 @@ function Dashboard({ onNavigate }) {
           <h2 className="font-semibold text-gray-900 mb-4">Your Stats</h2>
           {logsLoading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
+              <Loader2 className="w-6 h-6 text-primary-600 animate-spin" />
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-4">
@@ -80,7 +80,7 @@ function Dashboard({ onNavigate }) {
             {logs?.length > 5 && (
               <button
                 onClick={() => onNavigate('insights')}
-                className="text-sm text-indigo-600 hover:text-indigo-700"
+                className="text-sm text-primary-600 hover:text-primary-700"
               >
                 View all
               </button>
@@ -89,7 +89,7 @@ function Dashboard({ onNavigate }) {
 
           {logsLoading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
+              <Loader2 className="w-6 h-6 text-primary-600 animate-spin" />
             </div>
           ) : recentLogs.length > 0 ? (
             <div className="space-y-3">
@@ -117,7 +117,7 @@ function Dashboard({ onNavigate }) {
             <h2 className="font-semibold text-gray-900">Personal Insights</h2>
             <button
               onClick={() => onNavigate('insights')}
-              className="text-sm text-indigo-600 hover:text-indigo-700"
+              className="text-sm text-primary-600 hover:text-primary-700"
             >
               See details
             </button>
@@ -125,7 +125,7 @@ function Dashboard({ onNavigate }) {
 
           {insightsLoading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
+              <Loader2 className="w-6 h-6 text-primary-600 animate-spin" />
             </div>
           ) : insights?.top_triggers?.length > 0 ? (
             <div>

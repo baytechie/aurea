@@ -1,0 +1,695 @@
+/* ============================================
+   AUREA DESIGN TOKENS
+   Global CSS variables for the entire application
+   ============================================ */
+
+:root {
+  /* COLOR PALETTE - PRIMARY */
+  --color-brand-green: #2D7D5E;
+  --color-brand-green-dark: #246047;
+  --color-brand-green-light: #E0F0EC;
+
+  --color-warm-beige: #E8DCC8;
+  --color-warm-beige-dark: #DCC8B8;
+  --color-cream: #F5F3F0;
+  --color-white: #FFFFFF;
+
+  /* COLOR PALETTE - TEXT */
+  --color-text-primary: #1F2937;
+  --color-text-secondary: #6B7280;
+  --color-text-muted: #9CA3AF;
+
+  /* COLOR PALETTE - SCORES */
+  --color-score-excellent: #10B981;
+  --color-score-good: #84CC16;
+  --color-score-moderate: #F59E0B;
+  --color-score-concerning: #EF9B54;
+  --color-score-high-risk: #DC2626;
+
+  /* COLOR PALETTE - SCORE BARS (GRADIENT) */
+  --color-bar-1: #F87171;
+  --color-bar-2: #FB923C;
+  --color-bar-3: #FBBF24;
+  --color-bar-4: #A3E635;
+  --color-bar-5: #34D399;
+
+  /* COLOR PALETTE - UI */
+  --color-border: #E5E7EB;
+  --color-hover: #F3F4F6;
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
+  --color-error-bg: #FEF3C7;
+  --color-error-border: #F59E0B;
+  --color-error-text: #D97706;
+
+  /* TYPOGRAPHY */
+  --font-display: 'Garamond', 'Georgia', serif;
+  --font-body: 'Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', sans-serif;
+
+  --font-size-h1: 48px;
+  --font-size-h2: 32px;
+  --font-size-h3: 24px;
+  --font-size-h4: 20px;
+  --font-size-h5: 18px;
+  --font-size-body-lg: 18px;
+  --font-size-body: 16px;
+  --font-size-body-sm: 14px;
+  --font-size-caption: 12px;
+  --font-size-label: 13px;
+
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --line-height-heading: 1.2;
+  --line-height-body: 1.6;
+  --line-height-compact: 1.4;
+
+  /* SPACING */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+  --space-3xl: 40px;
+  --space-4xl: 48px;
+  --space-5xl: 64px;
+
+  /* BORDER RADIUS */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  /* SHADOWS */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1);
+
+  /* TRANSITIONS */
+  --transition-quick: 100ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Z-INDEX SCALE */
+  --z-dropdown: 10;
+  --z-sticky: 20;
+  --z-modal: 100;
+  --z-tooltip: 110;
+
+  /* BREAKPOINTS (min-width) */
+  --bp-mobile: 0px;
+  --bp-tablet: 640px;
+  --bp-desktop: 1025px;
+}
+
+/* ============================================
+   GLOBAL STYLES
+   ============================================ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-cream);
+  color: var(--color-text-primary);
+  line-height: var(--line-height-body);
+}
+
+/* ============================================
+   TYPOGRAPHY UTILITIES
+   ============================================ */
+
+/* Headings */
+h1 {
+  font-family: var(--font-display);
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-heading);
+}
+
+h2 {
+  font-family: var(--font-display);
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-heading);
+}
+
+h3 {
+  font-family: var(--font-display);
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-heading);
+}
+
+h4 {
+  font-family: var(--font-display);
+  font-size: var(--font-size-h4);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-heading);
+}
+
+h5 {
+  font-size: var(--font-size-h5);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-heading);
+}
+
+p {
+  margin: 0;
+}
+
+/* ============================================
+   BUTTON STYLES
+   ============================================ */
+
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+  border: none;
+  transition: all var(--transition);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Primary Button */
+.btn-primary {
+  background-color: var(--color-brand-green);
+  color: var(--color-white);
+  padding: var(--space-lg) var(--space-3xl);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--color-brand-green-dark);
+  box-shadow: 0 10px 15px rgba(45, 125, 94, 0.2);
+}
+
+.btn-primary:active:not(:disabled) {
+  background-color: #1d4a38;
+  transform: scale(0.98);
+}
+
+/* Secondary Button */
+.btn-secondary {
+  background-color: var(--color-white);
+  color: var(--color-brand-green);
+  border: 2px solid var(--color-brand-green);
+  padding: 10px 28px;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: var(--color-brand-green-light);
+  border-color: var(--color-brand-green-dark);
+}
+
+/* ============================================
+   FORM ELEMENTS
+   ============================================ */
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+textarea {
+  font-family: var(--font-body);
+  font-size: var(--font-size-body);
+  padding: var(--space-lg);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="search"]:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--color-brand-green);
+  box-shadow: 0 0 0 3px rgba(45, 125, 94, 0.1);
+}
+
+input::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* ============================================
+   CARDS & CONTAINERS
+   ============================================ */
+
+.card {
+  background-color: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Animation Utility Classes */
+.animate-fade-in {
+  animation: fadeIn var(--transition-slow);
+}
+
+.animate-slide-up {
+  animation: slideUp var(--transition-slow);
+}
+
+.animate-scale-in {
+  animation: scaleIn var(--transition);
+}
+
+.animate-pulse {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+/* Display */
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.flex-wrap {
+  flex-wrap: wrap;
+}
+
+.gap-sm {
+  gap: var(--space-sm);
+}
+
+.gap-md {
+  gap: var(--space-md);
+}
+
+.gap-lg {
+  gap: var(--space-lg);
+}
+
+.gap-xl {
+  gap: var(--space-xl);
+}
+
+/* Alignment */
+.items-center {
+  align-items: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+/* Spacing */
+.mt-sm {
+  margin-top: var(--space-sm);
+}
+
+.mt-md {
+  margin-top: var(--space-md);
+}
+
+.mt-lg {
+  margin-top: var(--space-lg);
+}
+
+.mt-xl {
+  margin-top: var(--space-xl);
+}
+
+.mb-sm {
+  margin-bottom: var(--space-sm);
+}
+
+.mb-md {
+  margin-bottom: var(--space-md);
+}
+
+.mb-lg {
+  margin-bottom: var(--space-lg);
+}
+
+.mb-xl {
+  margin-bottom: var(--space-xl);
+}
+
+.p-md {
+  padding: var(--space-md);
+}
+
+.p-lg {
+  padding: var(--space-lg);
+}
+
+.p-xl {
+  padding: var(--space-xl);
+}
+
+.px-md {
+  padding-left: var(--space-md);
+  padding-right: var(--space-md);
+}
+
+.px-lg {
+  padding-left: var(--space-lg);
+  padding-right: var(--space-lg);
+}
+
+.py-md {
+  padding-top: var(--space-md);
+  padding-bottom: var(--space-md);
+}
+
+.py-lg {
+  padding-top: var(--space-lg);
+  padding-bottom: var(--space-lg);
+}
+
+/* Width */
+.w-full {
+  width: 100%;
+}
+
+.max-w-sm {
+  max-width: 320px;
+}
+
+.max-w-md {
+  max-width: 448px;
+}
+
+.max-w-lg {
+  max-width: 512px;
+}
+
+.max-w-xl {
+  max-width: 640px;
+}
+
+.max-w-2xl {
+  max-width: 768px;
+}
+
+/* Height */
+.h-full {
+  height: 100%;
+}
+
+.h-screen {
+  height: 100vh;
+}
+
+/* Text Alignment */
+.text-left {
+  text-align: left;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-right {
+  text-align: right;
+}
+
+/* Text Colors */
+.text-primary {
+  color: var(--color-text-primary);
+}
+
+.text-secondary {
+  color: var(--color-text-secondary);
+}
+
+.text-muted {
+  color: var(--color-text-muted);
+}
+
+.text-brand {
+  color: var(--color-brand-green);
+}
+
+/* Background Colors */
+.bg-white {
+  background-color: var(--color-white);
+}
+
+.bg-cream {
+  background-color: var(--color-cream);
+}
+
+.bg-beige {
+  background-color: var(--color-warm-beige);
+}
+
+.bg-brand {
+  background-color: var(--color-brand-green);
+}
+
+.bg-success {
+  background-color: var(--color-success);
+}
+
+.bg-warning {
+  background-color: var(--color-warning);
+}
+
+.bg-error {
+  background-color: var(--color-error-bg);
+}
+
+/* Border Radius */
+.rounded-sm {
+  border-radius: var(--radius-sm);
+}
+
+.rounded-md {
+  border-radius: var(--radius-md);
+}
+
+.rounded-lg {
+  border-radius: var(--radius-lg);
+}
+
+.rounded-xl {
+  border-radius: var(--radius-xl);
+}
+
+.rounded-full {
+  border-radius: var(--radius-full);
+}
+
+/* Shadow */
+.shadow-sm {
+  box-shadow: var(--shadow-sm);
+}
+
+.shadow-md {
+  box-shadow: var(--shadow-md);
+}
+
+.shadow-lg {
+  box-shadow: var(--shadow-lg);
+}
+
+.shadow-xl {
+  box-shadow: var(--shadow-xl);
+}
+
+/* Opacity */
+.opacity-50 {
+  opacity: 0.5;
+}
+
+.opacity-75 {
+  opacity: 0.75;
+}
+
+/* ============================================
+   RESPONSIVE UTILITIES
+   ============================================ */
+
+@media (max-width: 640px) {
+  :root {
+    --font-size-h1: 32px;
+    --font-size-h2: 28px;
+    --font-size-h3: 24px;
+    --font-size-body-lg: 16px;
+    --font-size-body: 14px;
+  }
+
+  .hidden-mobile {
+    display: none;
+  }
+
+  .full-width-mobile {
+    width: 100%;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .hidden-tablet {
+    display: none;
+  }
+}
+
+@media (min-width: 1025px) {
+  .hidden-desktop {
+    display: none;
+  }
+}
+
+/* ============================================
+   ACCESSIBILITY
+   ============================================ */
+
+/* Focus visible - keyboard navigation */
+button:focus-visible,
+input:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--color-brand-green);
+  outline-offset: 2px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: more) {
+  body {
+    border: 1px solid var(--color-text-primary);
+  }
+
+  .card {
+    border-width: 2px;
+  }
+
+  button {
+    border: 2px solid currentColor;
+  }
+}
+
+/* Dark mode (future enhancement) */
+@media (prefers-color-scheme: dark) {
+  /* To be implemented */
+}
+
+/* ============================================
+   PRINT STYLES
+   ============================================ */
+
+@media print {
+  body {
+    background-color: var(--color-white);
+  }
+
+  button,
+  input {
+    display: none;
+  }
+
+  .print-hidden {
+    display: none;
+  }
+}

@@ -10,7 +10,7 @@ All endpoints are defined here and organized by feature area:
 - Health: /health
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import List
 from datetime import date
@@ -23,13 +23,15 @@ from app.core.security import (
     create_access_token,
     get_current_user
 )
-from app.models.database import User, UserLog, IngredientScore, Prediction
+from app.models.database import User, UserLog, IngredientScore, Prediction, UserInsight
 from app.api.schemas import (
     UserCreate, UserLogin, AuthResponse, UserResponse,
-    IngredientScoreResponse,
-    LogCreate, LogResponse, LogListResponse,
+    UserProfileUpdate, UserProfileResponse,
+    IngredientScoreResponse, IngredientSearchResult, IngredientSearchResponse,
+    LogCreate, LogUpdate, LogResponse, LogListResponse, SymptomsOutput,
     PredictionCreate, PredictionResponse, PredictionListResponse,
     InsightsResponse, TriggerInfo,
+    UserInsightResponse,
     HealthResponse
 )
 from app.services.ingredient_scorer import IngredientScorer
@@ -131,8 +133,170 @@ async def login(credentials: UserLogin, db: Session = Depends(get_db)):
 
 
 # ============================================================
+# User Profile Endpoints
+# ============================================================
+
+@router.get("/users/me", response_model=UserProfileResponse, tags=["Users"])
+async def get_current_user_profile(
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get the current user's profile.
+
+    Returns complete user profile including optional fields.
+    """
+    return UserProfileResponse(
+        id=current_user.id,
+        email=current_user.email,
+        name=current_user.name,
+        bio=current_user.bio,
+        profile_picture_url=current_user.profile_picture_url,
+        cycle_enabled=current_user.cycle_enabled,
+        created_at=current_user.created_at,
+        updated_at=current_user.updated_at
+    )
+
+
+@router.patch("/users/me", response_model=UserProfileResponse, tags=["Users"])
+async def update_current_user_profile(
+    profile_update: UserProfileUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Update the current user's profile.
+
+    - Supports partial updates
+    - Only updates provided fields
+    """
+    # Update only the fields that were provided
+    update_data = profile_update.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(current_user, field, value)
+
+    db.commit()
+    db.refresh(current_user)
+
+    return UserProfileResponse(
+        id=current_user.id,
+        email=current_user.email,
+        name=current_user.name,
+        bio=current_user.bio,
+        profile_picture_url=current_user.profile_picture_url,
+        cycle_enabled=current_user.cycle_enabled,
+        created_at=current_user.created_at,
+        updated_at=current_user.updated_at
+    )
+
+
+# ============================================================
 # Ingredient Endpoints
 # ============================================================
+
+# NOTE: /ingredient/search MUST come before /ingredient/{name} to avoid route conflicts
+
+@router.get("/ingredient/search", response_model=IngredientSearchResponse, tags=["Ingredients"])
+async def search_ingredients(
+    q: str = Query(..., min_length=2, description="Search query"),
+    limit: int = Query(10, ge=1, le=50, description="Maximum number of results"),
+    db: Session = Depends(get_db)
+):
+    """
+    Search for ingredients by name (autocomplete).
+
+    - Uses fuzzy matching (case-insensitive, partial match)
+    - Checks cached ingredients in DB first
+    - Falls back to static ingredient list
+    - Returns match_score based on how closely the query matches
+    - Results sorted by match_score descending
+    """
+    from app.data.common_ingredients import get_all_ingredients, get_ingredient_category
+
+    query_lower = q.lower().strip()
+    results = []
+
+    # First, check cached ingredients in the database
+    db_ingredients = db.query(IngredientScore.ingredient_name).all()
+    db_ingredient_names = {row.ingredient_name.lower() for row in db_ingredients}
+
+    # Combine DB ingredients with static list (avoiding duplicates)
+    static_ingredients = get_all_ingredients()
+    all_ingredients = list(db_ingredient_names.union(
+        ing.lower() for ing in static_ingredients
+    ))
+
+    # Calculate match scores for each ingredient
+    for ingredient in all_ingredients:
+        score = _calculate_match_score(query_lower, ingredient)
+        if score > 0:
+            category = get_ingredient_category(ingredient)
+            results.append(
+                IngredientSearchResult(
+                    ingredient_name=ingredient,
+                    match_score=score,
+                    category=category
+                )
+            )
+
+    # Sort by match_score descending
+    results.sort(key=lambda x: x.match_score, reverse=True)
+
+    # Apply limit
+    limited_results = results[:limit]
+
+    return IngredientSearchResponse(
+        results=limited_results,
+        total=len(results)
+    )
+
+
+def _calculate_match_score(query: str, ingredient: str) -> float:
+    """Calculate a match score between a query and an ingredient name."""
+    # Exact match
+    if query == ingredient:
+        return 1.0
+
+    # Starts with query
+    if ingredient.startswith(query):
+        return 0.9
+
+    # Check if query matches at word boundary
+    words = ingredient.split()
+    for word in words:
+        if word.startswith(query):
+            return 0.7
+
+    # Contains query anywhere
+    if query in ingredient:
+        position = ingredient.index(query)
+        position_factor = max(0.5, 0.7 - (position / len(ingredient)) * 0.2)
+        return position_factor
+
+    # Fuzzy matching - check character overlap
+    query_set = set(query)
+    ingredient_set = set(ingredient)
+    common_chars = query_set.intersection(ingredient_set)
+
+    if not common_chars:
+        return 0.0
+
+    overlap_ratio = len(common_chars) / len(query_set)
+    if overlap_ratio >= 0.6:
+        if _is_subsequence(query, ingredient):
+            return min(0.4, overlap_ratio * 0.5)
+        return min(0.3, overlap_ratio * 0.4)
+
+    return 0.0
+
+
+def _is_subsequence(query: str, ingredient: str) -> bool:
+    """Check if query characters appear in order within ingredient."""
+    query_idx = 0
+    for char in ingredient:
+        if query_idx < len(query) and char == query[query_idx]:
+            query_idx += 1
+    return query_idx == len(query)
+
 
 @router.get("/ingredient/{name}", response_model=IngredientScoreResponse, tags=["Ingredients"])
 async def get_ingredient_score(name: str, db: Session = Depends(get_db)):
@@ -229,7 +393,7 @@ async def create_log(
     if existing:
         # Update existing log
         existing.ingredients = log_data.ingredients
-        existing.symptoms = log_data.symptoms.model_dump()
+        existing.set_symptoms_from_dict(log_data.symptoms.model_dump())
         existing.cycle_phase = log_data.cycle_phase
         db.commit()
         db.refresh(existing)
@@ -237,7 +401,7 @@ async def create_log(
             id=existing.id,
             date=existing.date,
             ingredients=existing.ingredients,
-            symptoms=existing.symptoms,
+            symptoms=SymptomsOutput(**existing.get_symptoms_with_fallback()),
             cycle_phase=existing.cycle_phase,
             created_at=existing.created_at
         )
@@ -247,9 +411,9 @@ async def create_log(
         user_id=current_user.id,
         date=log_date,
         ingredients=log_data.ingredients,
-        symptoms=log_data.symptoms.model_dump(),
         cycle_phase=log_data.cycle_phase
     )
+    log.set_symptoms_from_dict(log_data.symptoms.model_dump())
     db.add(log)
     db.commit()
     db.refresh(log)
@@ -258,7 +422,7 @@ async def create_log(
         id=log.id,
         date=log.date,
         ingredients=log.ingredients,
-        symptoms=log.symptoms,
+        symptoms=SymptomsOutput(**log.get_symptoms_with_fallback()),
         cycle_phase=log.cycle_phase,
         created_at=log.created_at
     )
@@ -283,7 +447,7 @@ async def get_logs(
             id=log.id,
             date=log.date,
             ingredients=log.ingredients,
-            symptoms=log.symptoms,
+            symptoms=SymptomsOutput(**log.get_symptoms_with_fallback()),
             cycle_phase=log.cycle_phase,
             created_at=log.created_at
         )
@@ -315,7 +479,7 @@ async def get_log_by_date(
         id=log.id,
         date=log.date,
         ingredients=log.ingredients,
-        symptoms=log.symptoms,
+        symptoms=SymptomsOutput(**log.get_symptoms_with_fallback()),
         cycle_phase=log.cycle_phase,
         created_at=log.created_at
     )

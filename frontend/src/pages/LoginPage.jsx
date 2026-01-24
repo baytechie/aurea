@@ -17,10 +17,10 @@ function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white flex flex-col">
+    <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white flex flex-col">
       {/* Navigation */}
       <nav className="flex items-center justify-between px-6 py-4 max-w-6xl mx-auto w-full">
-        <Link to="/" className="text-2xl font-bold text-indigo-600">
+        <Link to="/" className="text-2xl font-bold text-primary-600">
           Aurea
         </Link>
       </nav>
@@ -87,11 +87,11 @@ function LoginPage() {
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                  className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
                 />
                 <span className="text-sm text-gray-600">Remember me</span>
               </label>
-              <a href="#" className="text-sm text-indigo-600 hover:text-indigo-700">
+              <a href="#" className="text-sm text-primary-600 hover:text-primary-700">
                 Forgot password?
               </a>
             </div>
@@ -114,7 +114,7 @@ function LoginPage() {
 
           <p className="mt-8 text-center text-gray-600">
             Don't have an account?{' '}
-            <Link to="/signup" className="text-indigo-600 hover:text-indigo-700 font-medium">
+            <Link to="/signup" className="text-primary-600 hover:text-primary-700 font-medium">
               Sign up
             </Link>
           </p>

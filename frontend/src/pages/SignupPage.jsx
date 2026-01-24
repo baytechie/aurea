@@ -29,10 +29,10 @@ function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white flex flex-col">
+    <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white flex flex-col">
       {/* Navigation */}
       <nav className="flex items-center justify-between px-6 py-4 max-w-6xl mx-auto w-full">
-        <Link to="/" className="text-2xl font-bold text-indigo-600">
+        <Link to="/" className="text-2xl font-bold text-primary-600">
           Aurea
         </Link>
       </nav>
@@ -156,7 +156,7 @@ function SignupPage() {
 
           <p className="mt-8 text-center text-gray-600">
             Already have an account?{' '}
-            <Link to="/login" className="text-indigo-600 hover:text-indigo-700 font-medium">
+            <Link to="/login" className="text-primary-600 hover:text-primary-700 font-medium">
               Log in
             </Link>
           </p>

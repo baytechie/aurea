@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Plus, X, Loader2, Check, Calendar } from 'lucide-react';
 import { useCreateLog } from '../hooks/useIngredients';
 import { SYMPTOM_LABELS, CYCLE_PHASES, getToday } from '../lib/utils';
+import SymptomSlider from './SymptomSlider';
 
 function DailyLogger() {
   const [date, setDate] = useState(getToday());
@@ -135,13 +136,13 @@ function DailyLogger() {
               {ingredients.map((ingredient) => (
                 <span
                   key={ingredient}
-                  className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm"
+                  className="inline-flex items-center gap-1 px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-sm"
                 >
                   {ingredient}
                   <button
                     type="button"
                     onClick={() => removeIngredient(ingredient)}
-                    className="hover:text-indigo-900"
+                    className="hover:text-primary-900"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -219,7 +220,7 @@ function DailyLogger() {
   );
 }
 
-function SymptomSlider({ label, value, onChange, inverted = false }) {
+function SymptomSliderFallback({ label, value, onChange, inverted = false }) {
   const labels = inverted
     ? ['None', 'Mild', 'Moderate', 'High', 'Severe', 'Extreme']
     : ['Very Low', 'Low', 'Moderate', 'Good', 'Great', 'Excellent'];
@@ -228,7 +229,7 @@ function SymptomSlider({ label, value, onChange, inverted = false }) {
     <div>
       <div className="flex items-center justify-between mb-2">
         <label className="text-sm font-medium text-gray-700">{label}</label>
-        <span className="text-sm text-indigo-600 font-medium">
+        <span className="text-sm text-primary-600 font-medium">
           {labels[value]}
         </span>
       </div>
@@ -238,7 +239,7 @@ function SymptomSlider({ label, value, onChange, inverted = false }) {
         max="5"
         value={value}
         onChange={(e) => onChange(parseInt(e.target.value))}
-        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+        className="symptom-slider"
       />
       <div className="flex justify-between text-xs text-gray-400 mt-1">
         <span>{labels[0]}</span>

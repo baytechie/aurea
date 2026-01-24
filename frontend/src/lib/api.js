@@ -1,6 +1,18 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Dynamically determine API URL based on current hostname
+// This allows the app to work from localhost and from network devices
+const getApiBaseUrl = () => {
+  // Check for environment variable first
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  // Use same hostname as frontend but with port 8000
+  const hostname = window.location.hostname;
+  return `http://${hostname}:8000`;
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 // Create axios instance with default config
 const api = axios.create({
@@ -57,8 +69,17 @@ export const authApi = {
 
 // Ingredient API
 export const ingredientApi = {
-  search: async (name) => {
+  // Get full ingredient score
+  getScore: async (name) => {
     const response = await api.get(`/ingredient/${encodeURIComponent(name)}`);
+    return response.data;
+  },
+
+  // Autocomplete search
+  search: async (query, limit = 10) => {
+    const response = await api.get('/ingredient/search', {
+      params: { q: query, limit }
+    });
     return response.data;
   },
 };

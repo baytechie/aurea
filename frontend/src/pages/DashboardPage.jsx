@@ -4,15 +4,18 @@ import {
   Search,
   Calendar,
   TrendingUp,
+  Sparkles,
   Settings,
   LogOut,
   Menu,
   X
 } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
-import IngredientSearch from '../components/IngredientSearch';
+import IngredientSearch from '../components/ingredients';
 import DailyLogger from '../components/DailyLogger';
 import Dashboard from '../components/Dashboard';
+import InsightsTab from '../components/InsightsTab';
+import PredictionsTab from '../components/PredictionsTab';
 
 function DashboardPage() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -24,6 +27,7 @@ function DashboardPage() {
     { id: 'search', name: 'Search Ingredients', icon: Search },
     { id: 'logger', name: 'Daily Logger', icon: Calendar },
     { id: 'insights', name: 'Insights', icon: TrendingUp },
+    { id: 'predictions', name: 'Predictions', icon: Sparkles },
     { id: 'settings', name: 'Settings', icon: Settings },
   ];
 
@@ -35,8 +39,10 @@ function DashboardPage() {
         return <DailyLogger />;
       case 'insights':
         return <InsightsTab />;
+      case 'predictions':
+        return <PredictionsTab />;
       case 'settings':
-        return <SettingsTab />;
+        return <SettingsTab user={user} />;
       default:
         return <Dashboard onNavigate={setActiveTab} />;
     }
@@ -62,7 +68,7 @@ function DashboardPage() {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-            <span className="text-2xl font-bold text-indigo-600">Aurea</span>
+            <span className="text-2xl font-bold text-primary-600">Aurea</span>
             <button
               className="lg:hidden text-gray-500"
               onClick={() => setSidebarOpen(false)}
@@ -86,7 +92,7 @@ function DashboardPage() {
                     w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left
                     transition-colors
                     ${activeTab === item.id
-                      ? 'bg-indigo-50 text-indigo-600'
+                      ? 'bg-primary-50 text-primary-600'
                       : 'text-gray-600 hover:bg-gray-50'
                     }
                   `}
@@ -101,8 +107,8 @@ function DashboardPage() {
           {/* User section */}
           <div className="p-4 border-t border-gray-200">
             <div className="flex items-center gap-3 px-4 py-2 mb-2">
-              <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                <span className="text-indigo-600 font-medium">
+              <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
+                <span className="text-primary-600 font-medium">
                   {user?.email?.[0]?.toUpperCase() || 'U'}
                 </span>
               </div>
@@ -133,7 +139,7 @@ function DashboardPage() {
           >
             <Menu className="w-6 h-6" />
           </button>
-          <span className="text-xl font-bold text-indigo-600">Aurea</span>
+          <span className="text-xl font-bold text-primary-600">Aurea</span>
           <div className="w-6" /> {/* Spacer for centering */}
         </header>
 
@@ -146,43 +152,85 @@ function DashboardPage() {
   );
 }
 
-// Placeholder components for other tabs
-function InsightsTab() {
-  return (
-    <div className="max-w-4xl">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Your Insights</h1>
-      <div className="card">
-        <p className="text-gray-600">
-          Your personalized insights will appear here as you log more data.
-          Keep tracking your meals and symptoms to unlock patterns!
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function SettingsTab() {
+// Settings tab component
+function SettingsTab({ user }) {
   return (
     <div className="max-w-4xl">
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Settings</h1>
-      <div className="card space-y-6">
-        <div>
-          <h3 className="font-medium text-gray-900 mb-2">Notifications</h3>
+
+      {/* Profile Section */}
+      <div className="card mb-6">
+        <h2 className="font-semibold text-gray-900 mb-4">Profile</h2>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <p className="text-gray-900">{user?.email || 'Not available'}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Display Name</label>
+            <input
+              type="text"
+              placeholder="Enter your name"
+              className="input-field max-w-md"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
+            <textarea
+              placeholder="Tell us about yourself"
+              rows={3}
+              className="input-field max-w-md"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Preferences Section */}
+      <div className="card mb-6">
+        <h2 className="font-semibold text-gray-900 mb-4">Preferences</h2>
+        <div className="space-y-4">
           <label className="flex items-center gap-3">
-            <input type="checkbox" className="w-4 h-4 text-indigo-600 rounded" />
-            <span className="text-gray-600">Daily reminder to log meals</span>
+            <input
+              type="checkbox"
+              className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+            />
+            <span className="text-gray-700">Daily reminder to log meals</span>
+          </label>
+          <label className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+            />
+            <span className="text-gray-700">Enable menstrual cycle tracking</span>
+          </label>
+          <label className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+            />
+            <span className="text-gray-700">Receive weekly insights summary</span>
           </label>
         </div>
-        <div>
-          <h3 className="font-medium text-gray-900 mb-2">Cycle Tracking</h3>
-          <label className="flex items-center gap-3">
-            <input type="checkbox" className="w-4 h-4 text-indigo-600 rounded" />
-            <span className="text-gray-600">Enable menstrual cycle tracking</span>
-          </label>
-        </div>
-        <div>
-          <h3 className="font-medium text-gray-900 mb-2">Data Export</h3>
-          <button className="btn-secondary">Export My Data</button>
+      </div>
+
+      {/* Data Section */}
+      <div className="card">
+        <h2 className="font-semibold text-gray-900 mb-4">Data Management</h2>
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-sm font-medium text-gray-700 mb-2">Export Your Data</h3>
+            <p className="text-sm text-gray-500 mb-3">
+              Download all your logs, insights, and predictions in JSON format.
+            </p>
+            <button className="btn-secondary">Export Data</button>
+          </div>
+          <div className="pt-4 border-t border-gray-200">
+            <h3 className="text-sm font-medium text-danger-600 mb-2">Danger Zone</h3>
+            <p className="text-sm text-gray-500 mb-3">
+              Permanently delete your account and all associated data.
+            </p>
+            <button className="btn-danger">Delete Account</button>
+          </div>
         </div>
       </div>
     </div>
