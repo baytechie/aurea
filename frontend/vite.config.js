@@ -1,10 +1,10 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-export default defineConfig(({ mode }) => ({
+export default defineConfig({
   plugins: [react()],
-  // Use /aurea/ for local nginx dev, / for production
-  base: mode === 'production' ? '/' : '/aurea/',
+  // Always use / as base since we deploy to root domain
+  base: '/',
   server: {
     port: 5173,
     proxy: {
