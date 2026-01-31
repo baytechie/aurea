@@ -10,7 +10,7 @@ databases:
   - name: aurea-db
     databaseName: aurea
     user: aurea
-    plan: basic
+    plan: basic-256mb
     region: oregon
 
 services:
