@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// Use environment variable or default to /backend for nginx proxy
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/backend';
+// API base URL from environment variable
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.aureahealth.app';
 
 // Create axios instance with default config
 const api = axios.create({

@@ -1211,7 +1211,7 @@ All API errors follow a consistent structure:
     ],
     "request_id": "req_abc123",
     "timestamp": "2026-01-20T12:30:00Z",
-    "documentation_url": "https://docs.aurea.app/errors/ERROR_CODE"
+    "documentation_url": "https://docs.aureahealth.app/errors/ERROR_CODE"
   }
 }
 ```
@@ -1344,7 +1344,7 @@ async def aurea_exception_handler(request: Request, exc: AureaException):
                 "details": exc.details,
                 "request_id": str(uuid.uuid4()),
                 "timestamp": datetime.utcnow().isoformat() + "Z",
-                "documentation_url": f"https://docs.aurea.app/errors/{exc.code}"
+                "documentation_url": f"https://docs.aureahealth.app/errors/{exc.code}"
             }
         }
     )
@@ -1786,15 +1786,15 @@ info:
   version: 2.0.0
   contact:
     name: Aurea Support
-    email: api@aurea.app
+    email: support@aureahealth.app
   license:
     name: Proprietary
 
 servers:
-  - url: https://api.aurea.app/v2
+  - url: https://api.aureahealth.app
     description: Production
-  - url: https://staging-api.aurea.app/v2
-    description: Staging
+  - url: http://localhost:8000
+    description: Development
   - url: http://localhost:8000
     description: Development
 

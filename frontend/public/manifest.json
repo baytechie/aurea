@@ -57,21 +57,5 @@
       "purpose": "maskable any"
     }
   ],
-  "categories": ["health", "lifestyle", "food"],
-  "screenshots": [
-    {
-      "src": "/screenshots/home.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "Home screen"
-    },
-    {
-      "src": "/screenshots/mobile.png",
-      "sizes": "750x1334",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Mobile view"
-    }
-  ]
+  "categories": ["health", "lifestyle", "food"]
 }
