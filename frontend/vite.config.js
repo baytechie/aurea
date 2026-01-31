@@ -1,9 +1,10 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react()],
-  base: '/aurea/',
+  // Use /aurea/ for local nginx dev, / for production
+  base: mode === 'production' ? '/' : '/aurea/',
   server: {
     port: 5173,
     proxy: {
@@ -18,4 +19,4 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: false,
   },
-});
+}));
