@@ -54,7 +54,6 @@ services:
   - type: web
     name: aurea-web
     runtime: static
-    plan: free
     buildCommand: |
       cd frontend && npm install && npm run build
     staticPublishPath: frontend/dist
