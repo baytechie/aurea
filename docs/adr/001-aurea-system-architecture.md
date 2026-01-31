@@ -1,8 +1,47 @@
 # ADR-001: Aurea System Architecture
 
-**Status:** Proposed
+**Status:** Accepted (Partially Implemented)
 **Date:** 2026-01-20
+**Last Updated:** 2026-01-31
 **Decision Makers:** Engineering Team
+
+---
+
+## Current Deployment Status
+
+| Service | URL | Technology | Status |
+|---------|-----|------------|--------|
+| **Frontend PWA** | https://aureahealth.app | React 19 + Vite | ✅ Live |
+| **Backend API** | https://api.aureahealth.app | FastAPI | ✅ Live |
+| **Data Science** | https://datascience.aureahealth.app | Streamlit | ✅ Live |
+| **Database** | Render PostgreSQL | PostgreSQL | ✅ Live |
+| **Mobile iOS** | App Store | React Native | 🚧 Pending |
+
+**Hosting:** Render.com (Blueprint deployment via `render.yaml`)
+**Domain:** aureahealth.app (Porkbun)
+
+---
+
+## Implementation Status
+
+### Completed
+- ✅ FastAPI backend with JWT authentication
+- ✅ React frontend with Zustand state management
+- ✅ PostgreSQL database with SQLAlchemy ORM
+- ✅ Streamlit data science dashboard
+- ✅ React Native iOS app structure
+- ✅ Render deployment configuration
+- ✅ CORS and security headers
+
+### In Progress / Gaps
+- 🚧 ML Services return mock data (B04 - P0)
+- 🚧 No database migrations created (B11/B12 - P0)
+- 🚧 Admin dashboard has no authentication (D01 - P0)
+- 🚧 Settings page not wired to API (F02 - P1)
+- 🚧 No CI/CD pipeline (P08 - P1)
+- 🚧 No APM/error tracking (P11 - P1)
+
+See **Appendix D: Known Gaps** for full list.
 
 ---
 
@@ -1436,6 +1475,135 @@ Prediction:
 
 ---
 
-**Document Version:** 1.0
-**Last Updated:** 2026-01-20
+---
+
+## Appendix D: Known Gaps (As of 2026-01-31)
+
+### P0 - Critical (Must Fix)
+
+| ID | Component | Issue | Recommendation |
+|----|-----------|-------|----------------|
+| B04 | Backend | ML Services are stubs returning mock data | Implement actual ML logic or clearly mark as beta |
+| B11 | Backend | No Alembic migrations created | Generate initial migration from current models |
+| B12 | Backend | Schema uses `create_all()` | Use proper migrations for production |
+| D01 | Admin | Dashboard has no authentication | Add basic auth or integrate with main auth |
+| D02 | Admin | Python console allows arbitrary code execution | Remove or restrict in production |
+| P06 | DevOps | No migrations exist | Create and apply migrations |
+| P07 | DevOps | No migration CI/CD | Add migration step to deployment |
+
+### P1 - High Priority
+
+| ID | Component | Issue | Recommendation |
+|----|-----------|-------|----------------|
+| B03 | Backend | Missing API versioning | Add `/api/v1/` prefix |
+| B05 | Backend | No rate limiting implemented | Implement using slowapi |
+| B06 | Backend | Missing password reset endpoint | Add forgot/reset password flow |
+| B17 | Backend | No account lockout | Implement after N failed attempts |
+| F02 | Frontend | Settings page not functional | Wire up profile update API |
+| C09 | Testing | Minimal backend tests | Add service layer tests |
+| C10 | Testing | No frontend tests | Add Jest/RTL tests |
+| P02 | Config | Debug mode enabled by default | Default to False |
+| P08 | DevOps | No CI/CD configuration | Add GitHub Actions |
+| P11 | DevOps | No APM integration | Add Sentry or similar |
+
+### P2 - Medium Priority
+
+| ID | Component | Issue |
+|----|-----------|-------|
+| B01 | Backend | Monolithic routes.py (625 lines) |
+| B02 | Backend | No repository layer |
+| B07 | Backend | No refresh token mechanism |
+| B08 | Backend | Missing log update endpoint |
+| B13 | Backend | No soft delete pattern |
+| B15 | Backend | No role-based access control |
+| B18 | Backend | No server-side session management |
+| B20 | Backend | No structured logging |
+| F01 | Frontend | No TypeScript |
+| F03 | Frontend | Missing profile API integration |
+| F06 | Frontend | No service worker for PWA |
+| F12 | Frontend | Missing user profile API calls |
+| D03 | Admin | Direct database access bypasses API |
+| D05 | Admin | Missing advanced analytics |
+| M01 | Mobile | No offline support |
+| M03 | Mobile | No push notifications |
+| M07 | Mobile | Token storage key mismatch |
+| C02 | Cross | No token refresh flow |
+| C05 | Cross | No global error boundary |
+| C06 | Cross | No CSP headers |
+| C07 | Cross | No input sanitization |
+| C11 | Mobile | Test is placeholder |
+| P03 | Config | Health check doesn't verify DB |
+| P09 | DevOps | No Docker configuration |
+| P10 | DevOps | No infrastructure as code |
+| P12 | DevOps | No structured logging |
+| P13 | DevOps | No metrics collection |
+
+---
+
+## Appendix E: Deployment Architecture
+
+```
+                    ┌─────────────────────────────────────────┐
+                    │           aureahealth.app               │
+                    │         (Porkbun DNS)                   │
+                    └─────────────────────────────────────────┘
+                                      │
+           ┌──────────────────────────┼──────────────────────────┐
+           │                          │                          │
+           ▼                          ▼                          ▼
+┌─────────────────────┐  ┌─────────────────────┐  ┌─────────────────────┐
+│   aurea-web         │  │   aurea-api         │  │ aurea-datascience   │
+│   (Static Site)     │  │   (Web Service)     │  │   (Web Service)     │
+├─────────────────────┤  ├─────────────────────┤  ├─────────────────────┤
+│ React 19 + Vite     │  │ FastAPI + Uvicorn   │  │ Streamlit           │
+│ Tailwind CSS        │  │ SQLAlchemy 2.0      │  │ Pandas + Plotly     │
+│ Zustand + RQ        │  │ JWT Auth            │  │                     │
+└─────────────────────┘  └──────────┬──────────┘  └──────────┬──────────┘
+                                    │                        │
+                                    ▼                        ▼
+                         ┌─────────────────────────────────────┐
+                         │           aurea-db                  │
+                         │     (PostgreSQL - Render)           │
+                         │     Plan: basic-256mb               │
+                         └─────────────────────────────────────┘
+```
+
+### DNS Configuration
+
+| Type | Name | Value |
+|------|------|-------|
+| CNAME | @ | aurea-web.onrender.com |
+| CNAME | www | aurea-web.onrender.com |
+| CNAME | api | aurea-api.onrender.com |
+| CNAME | datascience | aurea-datascience.onrender.com |
+
+### Environment Variables (Production)
+
+**Backend (aurea-api):**
+```
+ENVIRONMENT=production
+DEBUG=false
+DATABASE_URL=(from Render PostgreSQL)
+JWT_SECRET=(auto-generated)
+CORS_ORIGINS=["https://aureahealth.app","https://www.aureahealth.app","https://datascience.aureahealth.app"]
+PYTHON_VERSION=3.11.0
+```
+
+**Frontend (aurea-web):**
+```
+VITE_API_URL=https://api.aureahealth.app
+NODE_VERSION=20
+```
+
+**Data Science (aurea-datascience):**
+```
+DATABASE_URL=(from Render PostgreSQL)
+API_URL=https://api.aureahealth.app
+PYTHON_VERSION=3.11.0
+```
+
+---
+
+**Document Version:** 1.1
+**Last Updated:** 2026-01-31
 **Author:** System Architect

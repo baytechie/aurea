@@ -1,6 +1,14 @@
-# Aurea - Personal Ingredient Predictor
+# Aurea Health - Personal Ingredient Predictor
 
 Track what you eat, understand how ingredients affect your body, and get personalized insights to feel your best.
+
+## Live Deployment
+
+| Service | URL | Status |
+|---------|-----|--------|
+| **Frontend PWA** | https://aureahealth.app | ✅ Live |
+| **Backend API** | https://api.aureahealth.app | ✅ Live |
+| **Data Science Dashboard** | https://datascience.aureahealth.app | ✅ Live |
 
 ## Features
 
@@ -8,39 +16,51 @@ Track what you eat, understand how ingredients affect your body, and get persona
 - **Daily Logging**: Track ingredients eaten and symptom ratings
 - **ML Predictions**: Personalized predictions based on your history
 - **Insights**: Discover your trigger foods and patterns
+- **Data Science Dashboard**: Analyze ingredient data and user patterns
 
 ## Tech Stack
 
-**Frontend:**
-- React 18 + Vite
-- Tailwind CSS
+### Frontend (PWA)
+- React 19 + Vite
+- Tailwind CSS 4
 - TanStack Query (React Query)
 - Zustand (state management)
-- React Router
+- React Router 7
 
-**Backend:**
-- FastAPI (Python)
-- SQLAlchemy ORM
-- PostgreSQL
+### Backend API
+- FastAPI (Python 3.11)
+- SQLAlchemy 2.0 ORM
+- PostgreSQL (Render)
 - JWT Authentication
 - Alembic (migrations)
 
+### Data Science Dashboard
+- Streamlit
+- Pandas, NumPy
+- Plotly (visualizations)
+- SQLAlchemy (database access)
+
+### Mobile App (iOS)
+- React Native 0.76
+- TypeScript
+- React Navigation 6
+- Zustand (state management)
+
 ## Quick Start
 
-### Prerequisites
-
-- Node.js 18+
-- Python 3.10+
-- PostgreSQL 15+
-
-### 1. Clone the Repository
+### Option 1: Use the Development Script
 
 ```bash
 git clone https://github.com/baytechie/aurea.git
 cd aurea
+./start-dev.sh
 ```
 
-### 2. Backend Setup
+This starts both frontend and backend with proper environment configuration.
+
+### Option 2: Manual Setup
+
+#### Backend
 
 ```bash
 cd backend
@@ -56,19 +76,14 @@ pip install -r requirements.txt
 cp .env.example .env
 # Edit .env with your database credentials
 
-# Create database
-createdb aurea  # or use pgAdmin
-
-# Run migrations
-alembic upgrade head
-
 # Start server
 python main.py
 ```
 
-Backend will be running at `http://localhost:8000`
+Backend: `http://localhost:8000`
+API Docs: `http://localhost:8000/docs`
 
-### 3. Frontend Setup
+#### Frontend
 
 ```bash
 cd frontend
@@ -83,7 +98,16 @@ echo "VITE_API_URL=http://localhost:8000" > .env
 npm run dev
 ```
 
-Frontend will be running at `http://localhost:5173`
+Frontend: `http://localhost:5173`
+
+#### Admin Dashboard
+
+```bash
+cd admin
+./start-admin.sh
+```
+
+Dashboard: `http://localhost:8501`
 
 ## API Endpoints
 
@@ -93,6 +117,7 @@ Frontend will be running at `http://localhost:5173`
 | POST | `/auth/signup` | Register | No |
 | POST | `/auth/login` | Login | No |
 | GET | `/ingredient/{name}` | Get ingredient scores | No |
+| GET | `/ingredient/search` | Search ingredients | No |
 | POST | `/logs` | Create daily log | Yes |
 | GET | `/logs` | Get user's logs | Yes |
 | GET | `/logs/{date}` | Get log by date | Yes |
@@ -100,12 +125,14 @@ Frontend will be running at `http://localhost:5173`
 | POST | `/predictions` | Request prediction | Yes |
 | GET | `/predictions` | Get predictions | Yes |
 | GET | `/insights` | Get user insights | Yes |
+| GET | `/users/me` | Get current user | Yes |
+| PATCH | `/users/me` | Update profile | Yes |
 
 ## Project Structure
 
 ```
 aurea/
-├── frontend/
+├── frontend/               # React PWA
 │   ├── src/
 │   │   ├── components/     # React components
 │   │   ├── pages/          # Page components
@@ -113,107 +140,135 @@ aurea/
 │   │   ├── lib/            # API client, utilities
 │   │   ├── store/          # Zustand stores
 │   │   └── App.jsx         # Main app
-│   └── package.json
+│   └── public/             # Static assets, PWA manifest
 │
-├── backend/
+├── backend/                # FastAPI Backend
 │   ├── app/
 │   │   ├── api/            # Routes and schemas
 │   │   ├── core/           # Config, DB, security
 │   │   ├── models/         # SQLAlchemy models
-│   │   └── services/       # Business logic (TO IMPLEMENT)
+│   │   └── services/       # Business logic
 │   ├── migrations/         # Alembic migrations
-│   ├── tests/              # Pytest tests
+│   └── tests/              # Pytest tests
+│
+├── admin/                  # Streamlit Dashboard
+│   ├── app.py              # Main dashboard
 │   └── requirements.txt
 │
-└── .claude/                # Claude Code agents and skills
+├── mobile/                 # React Native iOS App
+│   ├── src/
+│   │   ├── screens/        # Screen components
+│   │   ├── navigation/     # Navigation setup
+│   │   ├── hooks/          # Custom hooks
+│   │   └── lib/            # API client
+│   └── ios/                # Xcode project
+│
+├── docs/                   # Documentation
+│   ├── adr/                # Architecture decisions
+│   ├── api/                # API documentation
+│   └── design/             # UI specifications
+│
+├── render.yaml             # Render deployment config
+└── .claude/                # Claude Code configuration
     ├── agents/             # Specialized agents
     └── skills/             # Workflow skills
 ```
 
-## Services to Implement
+## Deployment
 
-The following service files are scaffolded with detailed docstrings but need implementation:
+### Render (Current Production)
 
-1. **`backend/app/services/api_wrapper.py`**
-   - Fetches ingredient data from Open Food Facts and USDA APIs
-   - Merges and normalizes results
-
-2. **`backend/app/services/ingredient_scorer.py`**
-   - Calculates health impact scores for ingredients
-   - Considers blood sugar, inflammation, gut, and hormonal factors
-
-3. **`backend/app/services/ml_predictor.py`**
-   - Trains per-user ML models on log history
-   - Predicts symptom outcomes for ingredients
-
-4. **`backend/app/services/analysis_engine.py`**
-   - Analyzes user logs for patterns
-   - Identifies trigger ingredients and correlations
-
-## Testing
-
-### Backend Tests
+The project uses Render Blueprint (`render.yaml`) for deployment:
 
 ```bash
-cd backend
-pytest -v
-pytest --cov=app  # With coverage
+# Push to GitHub triggers auto-deploy
+git push origin main
 ```
 
-### Frontend Build
+**Services Created:**
+- `aurea-web` - Static site for frontend
+- `aurea-api` - Web service for backend
+- `aurea-datascience` - Web service for Streamlit
+- `aurea-db` - PostgreSQL database
 
-```bash
-cd frontend
-npm run build
-npm run lint
-```
+### DNS Configuration (Porkbun/Registrar)
 
-## Deployment (Render)
+| Type | Name | Value |
+|------|------|-------|
+| CNAME | @ | aurea-web.onrender.com |
+| CNAME | www | aurea-web.onrender.com |
+| CNAME | api | aurea-api.onrender.com |
+| CNAME | datascience | aurea-datascience.onrender.com |
 
-### Database (PostgreSQL)
+## Known Gaps & Roadmap
 
-1. Create PostgreSQL database on Render
-2. Copy the connection string
+### Critical (P0)
+- [ ] ML Services return mock data (need real implementation)
+- [ ] Database migrations not created
+- [ ] Admin dashboard needs authentication
 
-### Backend
+### High Priority (P1)
+- [ ] API versioning (`/api/v1/`)
+- [ ] Rate limiting
+- [ ] Password reset flow
+- [ ] CI/CD pipeline
+- [ ] Test coverage
 
-1. Create Web Service
-2. Build Command: `pip install -r requirements.txt`
-3. Start Command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-4. Set environment variables:
-   - `DATABASE_URL`
-   - `JWT_SECRET`
-   - `ENVIRONMENT=production`
-   - `CORS_ORIGINS=["https://your-frontend-url.onrender.com"]`
+### Medium Priority (P2)
+- [ ] TypeScript migration (frontend)
+- [ ] Offline support (mobile)
+- [ ] Push notifications
+- [ ] Role-based access control
 
-### Frontend
-
-1. Create Static Site
-2. Build Command: `cd frontend && npm install && npm run build`
-3. Publish Directory: `frontend/dist`
-4. Set environment variable:
-   - `VITE_API_URL=https://your-backend-url.onrender.com`
+See `docs/adr/` for architecture decisions and roadmap.
 
 ## Development
 
 ### Using Claude Code Skills
 
-This project includes Claude Code skills for common workflows:
-
-- `/new-feature <description>` - Full feature development workflow
-- `/aurea-feature <description>` - Aurea-specific feature workflow
-- `/fix-bug <description>` - Bug investigation and fix
-- `/review-pr <PR number>` - Comprehensive PR review
-- `/analyze-codebase` - Codebase health analysis
+```bash
+/new-feature <description>    # Full feature workflow
+/aurea-feature <description>  # Aurea-specific workflow
+/fix-bug <description>        # Bug investigation
+/review-pr <PR number>        # PR review
+/analyze-codebase             # Codebase health
+```
 
 ### Available Agents
 
-- `@architect` - System design
+- `@architect` - System design and architecture
 - `@backend-engineer` - Backend development
 - `@frontend-engineer` - Frontend development
 - `@test-writer` - Writing tests
 - `@code-reviewer` - Code review
 - `@security-auditor` - Security analysis
+- `@safe-researcher` - Codebase exploration
+
+## Testing
+
+```bash
+# Backend
+cd backend
+pytest -v
+pytest --cov=app
+
+# Frontend
+cd frontend
+npm run build
+npm run lint
+
+# Mobile
+cd mobile
+npm test
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make changes
+4. Run tests
+5. Submit a pull request
 
 ## License
 
