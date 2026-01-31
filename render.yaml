@@ -46,7 +46,7 @@ services:
       - key: LOGIN_RATE_LIMIT_PER_MINUTE
         value: "5"
       - key: PYTHON_VERSION
-        value: "3.11"
+        value: "3.11.0"
     healthCheckPath: /health
     autoDeploy: true
 
@@ -96,5 +96,5 @@ services:
       - key: API_URL
         value: https://api.aureahealth.app
       - key: PYTHON_VERSION
-        value: "3.11"
+        value: "3.11.0"
     autoDeploy: true
