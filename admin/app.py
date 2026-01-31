@@ -1,6 +1,11 @@
 """
 Aurea Admin Dashboard
 A Streamlit-based admin interface for visualizing ingredient data and performing data analysis.
+
+Authentication:
+- All pages are protected behind JWT authentication
+- Users must sign in with their existing Aurea credentials
+- Tokens are validated against the same secret used by the backend API
 """
 
 import streamlit as st
@@ -14,19 +19,32 @@ import sys
 import os
 from sqlalchemy import create_engine, text
 
+# Import authentication module
+from auth import (
+    init_session_state,
+    is_authenticated,
+    get_current_user,
+    show_login_form,
+    show_logout_button,
+    require_auth
+)
+
 # Add backend to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
 
 # Database configuration
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 
-# Page config
+# Page config - must be first Streamlit command
 st.set_page_config(
     page_title="Aurea Admin Dashboard",
-    page_icon="🌿",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# Initialize authentication session state
+init_session_state()
 
 # Custom CSS
 st.markdown("""
@@ -52,6 +70,12 @@ st.markdown("""
         background-color: #f8f9fa;
         padding: 1rem;
         border-radius: 8px;
+    }
+    /* Login form styling */
+    .login-container {
+        max-width: 400px;
+        margin: 0 auto;
+        padding: 2rem;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -157,43 +181,59 @@ def load_users():
 
 
 def main():
+    """Main application entry point."""
+    # Check authentication first
+    if not is_authenticated():
+        # Show login form for unauthenticated users
+        show_login_form()
+        return
+
+    # User is authenticated - show the dashboard
+    show_authenticated_app()
+
+
+def show_authenticated_app():
+    """Show the main authenticated application."""
     # Sidebar navigation
-    st.sidebar.markdown("## 🌿 Aurea Admin")
+    st.sidebar.markdown("## Aurea Admin")
     st.sidebar.markdown("---")
 
     page = st.sidebar.radio(
         "Navigation",
-        ["📊 Dashboard", "🥗 Ingredients", "📈 Analytics", "🐍 Python Console"],
+        ["Dashboard", "Ingredients", "Analytics", "Python Console"],
         label_visibility="collapsed"
     )
 
     st.sidebar.markdown("---")
     st.sidebar.markdown("### Database Info")
     if DATABASE_URL:
-        st.sidebar.success("✓ PostgreSQL (Production)")
+        st.sidebar.success("PostgreSQL (Production)")
         st.sidebar.caption("Connected via DATABASE_URL")
     else:
         db_path = get_db_path()
         if Path(db_path).exists():
-            st.sidebar.success("✓ SQLite (Local)")
+            st.sidebar.success("SQLite (Local)")
             st.sidebar.caption(f"Path: {db_path}")
         else:
-            st.sidebar.error("✗ Database not found")
+            st.sidebar.error("Database not found")
+
+    # Show logout button in sidebar
+    show_logout_button()
 
     # Page routing
-    if page == "📊 Dashboard":
+    if page == "Dashboard":
         show_dashboard()
-    elif page == "🥗 Ingredients":
+    elif page == "Ingredients":
         show_ingredients()
-    elif page == "📈 Analytics":
+    elif page == "Analytics":
         show_analytics()
-    elif page == "🐍 Python Console":
+    elif page == "Python Console":
         show_python_console()
 
 
 def show_dashboard():
     """Main dashboard overview."""
-    st.markdown('<p class="main-header">📊 Dashboard Overview</p>', unsafe_allow_html=True)
+    st.markdown('<p class="main-header">Dashboard Overview</p>', unsafe_allow_html=True)
     st.markdown('<p class="sub-header">Real-time insights into your Aurea data</p>', unsafe_allow_html=True)
 
     # Load data
@@ -288,7 +328,7 @@ def show_dashboard():
 
 def show_ingredients():
     """Ingredient analysis page."""
-    st.markdown('<p class="main-header">🥗 Ingredient Analysis</p>', unsafe_allow_html=True)
+    st.markdown('<p class="main-header">Ingredient Analysis</p>', unsafe_allow_html=True)
     st.markdown('<p class="sub-header">Explore and analyze ingredient health scores</p>', unsafe_allow_html=True)
 
     ingredients_df = load_ingredients_data()
@@ -297,7 +337,7 @@ def show_ingredients():
         st.warning("No ingredients in database. Use the main Aurea app to search for ingredients.")
 
         # Add sample data button
-        if st.button("🔬 Load Sample Ingredients for Demo"):
+        if st.button("Load Sample Ingredients for Demo"):
             load_sample_ingredients()
             st.rerun()
         return
@@ -336,7 +376,7 @@ def show_ingredients():
     st.markdown(f"**Showing {len(filtered_df)} of {len(ingredients_df)} ingredients**")
 
     # Visualization tabs
-    tab1, tab2, tab3 = st.tabs(["📊 Score Comparison", "🔥 Heatmap", "📋 Data Table"])
+    tab1, tab2, tab3 = st.tabs(["Score Comparison", "Heatmap", "Data Table"])
 
     with tab1:
         if len(filtered_df) > 0:
@@ -386,7 +426,7 @@ def show_ingredients():
         # Export button
         csv = filtered_df.to_csv(index=False)
         st.download_button(
-            label="📥 Download CSV",
+            label="Download CSV",
             data=csv,
             file_name="ingredients_export.csv",
             mime="text/csv"
@@ -395,7 +435,7 @@ def show_ingredients():
 
 def show_analytics():
     """Advanced analytics page."""
-    st.markdown('<p class="main-header">📈 Advanced Analytics</p>', unsafe_allow_html=True)
+    st.markdown('<p class="main-header">Advanced Analytics</p>', unsafe_allow_html=True)
     st.markdown('<p class="sub-header">Deep dive into ingredient and user data</p>', unsafe_allow_html=True)
 
     ingredients_df = load_ingredients_data()
@@ -480,8 +520,11 @@ def show_analytics():
 
 def show_python_console():
     """Interactive Python console for data analysis."""
-    st.markdown('<p class="main-header">🐍 Python Data Analysis Console</p>', unsafe_allow_html=True)
+    st.markdown('<p class="main-header">Python Data Analysis Console</p>', unsafe_allow_html=True)
     st.markdown('<p class="sub-header">Write and execute Python code for custom analysis</p>', unsafe_allow_html=True)
+
+    # Security warning for admin console
+    st.warning("This console executes Python code. Use with caution.")
 
     # Pre-load data info
     st.info("""
@@ -564,7 +607,7 @@ print(correlation_matrix.round(3))"""
 
     col1, col2 = st.columns([1, 5])
     with col1:
-        run_button = st.button("▶️ Run Code", type="primary")
+        run_button = st.button("Run Code", type="primary")
 
     if run_button and code:
         st.markdown("---")
