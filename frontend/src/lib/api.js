@@ -32,7 +32,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('aurea_token');
       localStorage.removeItem('aurea_user');
-      window.location.href = '/aurea/login';
+      window.location.href = '/login';
     }
     return Promise.reject(error);
   }
