@@ -2,7 +2,7 @@
 Pydantic schemas for request/response validation.
 """
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, ConfigDict
 from typing import Optional, List, Dict, Any, Union
 from datetime import date, datetime
 from uuid import UUID
@@ -127,7 +127,9 @@ class SymptomsOutput(BaseModel):
 
 class LogCreate(BaseModel):
     """Schema for creating a daily log."""
-    date: Optional[date] = None  # Defaults to today if not provided
+    model_config = ConfigDict(coerce_numbers_to_str=False)
+
+    date: Optional[date] = Field(default=None, description="Defaults to today if not provided")
     ingredients: List[str]
     symptoms: SymptomsInput
     cycle_phase: Optional[str] = None

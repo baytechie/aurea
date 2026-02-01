@@ -127,12 +127,18 @@ function DailyLogger() {
     if (ingredients.length === 0) return;
 
     try {
-      await createLog.mutateAsync({
-        date,
+      // Only send date if it's not today (backend defaults to today)
+      const today = getToday();
+      const logData = {
         ingredients,
         symptoms,
         cycle_phase: cyclePhase || null,
-      });
+      };
+      // Only include date if user selected a past date
+      if (date !== today) {
+        logData.date = date;
+      }
+      await createLog.mutateAsync(logData);
       // Save foods to history before clearing
       saveFoodHistory(ingredients);
       setSubmitted(true);
