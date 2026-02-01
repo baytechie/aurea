@@ -72,8 +72,28 @@ class UserProfileResponse(BaseModel):
 # Ingredient Schemas
 # ============================================================
 
+class HealthScoreDetail(BaseModel):
+    """Schema for a single health score with confidence and description."""
+    score: Optional[int] = None
+    confidence: Optional[str] = None  # "high", "medium", "low"
+    description: Optional[str] = None
+
+
+class HealthScores(BaseModel):
+    """Schema for all health category scores with details."""
+    blood_sugar: Optional[HealthScoreDetail] = None
+    inflammation: Optional[HealthScoreDetail] = None
+    gut_impact: Optional[HealthScoreDetail] = None
+    disease_links: Optional[HealthScoreDetail] = None
+    hormonal: Optional[HealthScoreDetail] = None
+
+
 class IngredientScoreResponse(BaseModel):
-    """Schema for ingredient score response."""
+    """Schema for ingredient score response (backward compatible).
+
+    Maintains backward compatibility with existing clients while
+    supporting new fields for enhanced ingredient data.
+    """
     name: str
     blood_sugar_impact: Optional[int] = None
     inflammation_potential: Optional[int] = None
@@ -82,9 +102,58 @@ class IngredientScoreResponse(BaseModel):
     hormonal_relevance: Optional[Dict[str, Any]] = None
     evidence_confidence: Optional[str] = None
     sources: Optional[List[Dict[str, Any]]] = None
+    # New fields for comprehensive ingredient database
+    category: Optional[str] = None
+    disease_links: Optional[int] = None
+    is_trusted: Optional[bool] = None
 
     class Config:
         from_attributes = True
+
+
+class IngredientDetailedResponse(BaseModel):
+    """Schema for detailed ingredient response with all health categories.
+
+    Used by /ingredient/{name} endpoint to return comprehensive
+    health information including confidence levels and descriptions.
+    """
+    name: str
+    category: Optional[str] = None
+    overall_score: Optional[int] = None
+    is_trusted: bool = False
+    health_scores: Optional[HealthScores] = None
+    evidence_confidence: Optional[str] = None
+    sources: Optional[List[Dict[str, Any]]] = None
+    # Legacy fields for backward compatibility
+    blood_sugar_impact: Optional[int] = None
+    inflammation_potential: Optional[int] = None
+    gut_impact: Optional[int] = None
+    disease_links: Optional[int] = None
+    hormonal_relevance: Optional[Dict[str, Any]] = None
+
+    class Config:
+        from_attributes = True
+
+
+class IngredientListItem(BaseModel):
+    """Schema for a single ingredient in the list endpoint."""
+    name: str
+    category: Optional[str] = None
+    overall_score: Optional[int] = None
+    is_trusted: bool = False
+    blood_sugar_impact: Optional[int] = None
+    inflammation_potential: Optional[int] = None
+    gut_impact: Optional[int] = None
+    disease_links: Optional[int] = None
+
+
+class IngredientListResponse(BaseModel):
+    """Schema for ingredient list response with pagination."""
+    ingredients: List[IngredientListItem]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
 
 
 class IngredientSearchResult(BaseModel):
@@ -127,9 +196,9 @@ class SymptomsOutput(BaseModel):
 
 class LogCreate(BaseModel):
     """Schema for creating a daily log."""
-    model_config = ConfigDict(coerce_numbers_to_str=False)
+    model_config = ConfigDict(coerce_numbers_to_str=False, arbitrary_types_allowed=True)
 
-    date: Optional[date] = Field(default=None, description="Defaults to today if not provided")
+    date: Optional[date] = None  # Defaults to today if not provided
     ingredients: List[str]
     symptoms: SymptomsInput
     cycle_phase: Optional[str] = None

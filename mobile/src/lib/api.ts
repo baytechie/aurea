@@ -63,18 +63,49 @@ export interface AuthResponse {
   token: string;
 }
 
+// Health score detail with confidence information
+export interface HealthScoreDetail {
+  score: number;
+  confidence: number;
+  confidence_level: 'High' | 'Medium' | 'Low' | 'Emerging';
+  description: string;
+}
+
+// Nested health scores object
+export interface HealthScores {
+  blood_sugar: HealthScoreDetail;
+  inflammation: HealthScoreDetail;
+  gut_impact: HealthScoreDetail;
+  disease_links: HealthScoreDetail;
+  hormonal: HealthScoreDetail;
+}
+
 export interface IngredientScore {
   name: string;
   blood_sugar_impact: number;
   inflammation_potential: number;
   gut_impact: number;
   overall_score: number;
+  // New fields from enhanced API
+  category?: string;
+  is_trusted?: number; // 1 = researched, 0 = public sources
+  disease_links?: number;
+  // Detailed breakdown for each health category
+  blood_sugar_details?: HealthScoreDetail;
+  inflammation_details?: HealthScoreDetail;
+  gut_impact_details?: HealthScoreDetail;
+  disease_links_details?: HealthScoreDetail;
+  // Nested health scores object (alternative structure)
+  health_scores?: HealthScores;
   hormonal_relevance: {
     score: number;
+    confidence?: number;
+    confidence_level?: 'High' | 'Medium' | 'Low' | 'Emerging';
     insulin_impact: string;
     estrogen_impact: string;
     cortisol_impact: string;
     details: string;
+    description?: string;
   };
   evidence_confidence: 'high' | 'medium' | 'low';
   sources: Array<{name: string; url?: string}>;
@@ -105,6 +136,20 @@ export interface Insight {
   recommendations: string[];
 }
 
+// Search parameters
+export interface IngredientSearchParams {
+  q: string;
+  limit?: number;
+  category?: string;
+  sort_by?: 'name' | 'overall_score' | 'blood_sugar' | 'inflammation' | 'gut_impact';
+}
+
+// Category response
+export interface CategoryInfo {
+  name: string;
+  count: number;
+}
+
 // Auth API
 export const authApi = {
   login: async (email: string, password: string): Promise<AuthResponse> => {
@@ -130,10 +175,18 @@ export const authApi = {
 
 // Ingredients API
 export const ingredientsApi = {
-  search: async (query: string): Promise<IngredientScore[]> => {
-    const response = await api.get(`/ingredient/search`, {
-      params: {q: query, limit: 20},
-    });
+  search: async (
+    query: string,
+    options?: {category?: string; sort_by?: string; limit?: number}
+  ): Promise<IngredientScore[]> => {
+    const params: Record<string, any> = {q: query, limit: options?.limit || 20};
+    if (options?.category) {
+      params.category = options.category;
+    }
+    if (options?.sort_by) {
+      params.sort_by = options.sort_by;
+    }
+    const response = await api.get(`/ingredient/search`, {params});
     // API returns {results: [...], total: N} with ingredient_name field
     // Map to expected format with name field
     const results = response.data.results || [];
@@ -146,6 +199,38 @@ export const ingredientsApi = {
   getIngredient: async (name: string): Promise<IngredientScore> => {
     const response = await api.get(`/ingredient/${encodeURIComponent(name)}`);
     return response.data;
+  },
+
+  getIngredientsList: async (options?: {
+    category?: string;
+    sort_by?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{results: IngredientScore[]; total: number}> => {
+    const params: Record<string, any> = {};
+    if (options?.category) {
+      params.category = options.category;
+    }
+    if (options?.sort_by) {
+      params.sort_by = options.sort_by;
+    }
+    if (options?.limit) {
+      params.limit = options.limit;
+    }
+    if (options?.offset) {
+      params.offset = options.offset;
+    }
+    const response = await api.get('/ingredients', {params});
+    const results = (response.data.results || []).map((item: any) => ({
+      ...item,
+      name: item.ingredient_name || item.name,
+    }));
+    return {results, total: response.data.total || results.length};
+  },
+
+  getCategories: async (): Promise<CategoryInfo[]> => {
+    const response = await api.get('/ingredients/categories');
+    return response.data.categories || response.data || [];
   },
 };
 

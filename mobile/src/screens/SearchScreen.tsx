@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, {useState, useRef, useEffect, useCallback} from 'react';
 import {
   View,
   Text,
@@ -9,23 +9,102 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { useQuery, useQueries } from '@tanstack/react-query';
+import {useNavigation} from '@react-navigation/native';
+import {useQuery, useQueries} from '@tanstack/react-query';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { ingredientsApi } from '../lib/api';
-import { colors, typography, spacing, borderRadius, shadows, getScoreColor, getScoreBackgroundColor } from '../theme';
+import {ingredientsApi, IngredientScore} from '../lib/api';
+import {
+  colors,
+  typography,
+  spacing,
+  borderRadius,
+  shadows,
+  getScoreColor,
+  getScoreBackgroundColor,
+  getCategoryColor,
+} from '../theme';
 
 // Ingredient names to fetch (we'll get real scores from API)
-const TOP_RATED_NAMES = ['Spinach', 'Salmon', 'Blueberries', 'Avocado', 'Broccoli', 'Quinoa'];
-const WATCH_LIST_NAMES = ['Sugar', 'White Bread', 'Soda', 'Processed Meat', 'Margarine', 'Candy'];
+const TOP_RATED_NAMES = [
+  'Spinach',
+  'Salmon',
+  'Blueberries',
+  'Avocado',
+  'Broccoli',
+  'Quinoa',
+];
+const WATCH_LIST_NAMES = [
+  'Sugar',
+  'White Bread',
+  'Soda',
+  'Processed Meat',
+  'Margarine',
+  'Candy',
+];
 
 // Quick category filters with search terms
-const CATEGORY_DATA: Record<string, { icon: string; items: string[] }> = {
-  'All': { icon: 'grid-outline', items: [] },
-  'Fruits': { icon: 'nutrition-outline', items: ['apple', 'banana', 'orange', 'strawberry', 'blueberry', 'grape', 'mango', 'pineapple'] },
-  'Vegetables': { icon: 'leaf-outline', items: ['spinach', 'broccoli', 'carrot', 'tomato', 'lettuce', 'kale', 'cucumber', 'pepper'] },
-  'Proteins': { icon: 'fish-outline', items: ['chicken', 'salmon', 'beef', 'egg', 'tuna', 'turkey', 'tofu', 'shrimp'] },
-  'Grains': { icon: 'barcode-outline', items: ['rice', 'quinoa', 'oats', 'wheat', 'bread', 'pasta', 'barley', 'corn'] },
+const CATEGORY_DATA: Record<string, {icon: string; items: string[]}> = {
+  All: {icon: 'grid-outline', items: []},
+  Sweeteners: {
+    icon: 'cube-outline',
+    items: ['sugar', 'honey', 'stevia', 'aspartame', 'sucralose', 'maple syrup'],
+  },
+  'Fats & Oils': {
+    icon: 'water-outline',
+    items: ['olive oil', 'butter', 'coconut oil', 'avocado oil', 'canola oil'],
+  },
+  Fruits: {
+    icon: 'nutrition-outline',
+    items: [
+      'apple',
+      'banana',
+      'orange',
+      'strawberry',
+      'blueberry',
+      'grape',
+      'mango',
+      'pineapple',
+    ],
+  },
+  Vegetables: {
+    icon: 'leaf-outline',
+    items: [
+      'spinach',
+      'broccoli',
+      'carrot',
+      'tomato',
+      'lettuce',
+      'kale',
+      'cucumber',
+      'pepper',
+    ],
+  },
+  Proteins: {
+    icon: 'fish-outline',
+    items: [
+      'chicken',
+      'salmon',
+      'beef',
+      'egg',
+      'tuna',
+      'turkey',
+      'tofu',
+      'shrimp',
+    ],
+  },
+  Grains: {
+    icon: 'barcode-outline',
+    items: [
+      'rice',
+      'quinoa',
+      'oats',
+      'wheat',
+      'bread',
+      'pasta',
+      'barley',
+      'corn',
+    ],
+  },
 };
 
 const CATEGORY_LABELS = Object.keys(CATEGORY_DATA);
@@ -36,15 +115,16 @@ export default function SearchScreen() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const navigation = useNavigation<any>();
 
-  const { data: results, isLoading } = useQuery({
+  const {data: results, isLoading} = useQuery({
     queryKey: ['ingredientSearch', searchTerm],
     queryFn: () => ingredientsApi.search(searchTerm),
     enabled: searchTerm.length >= 2,
   });
 
   // Search for category items when category is selected
-  const categorySearchTerm = selectedCategory !== 'All' ? selectedCategory.toLowerCase() : '';
-  const { data: categoryResults, isLoading: isLoadingCategory } = useQuery({
+  const categorySearchTerm =
+    selectedCategory !== 'All' ? selectedCategory.toLowerCase() : '';
+  const {data: categoryResults, isLoading: isLoadingCategory} = useQuery({
     queryKey: ['categorySearch', categorySearchTerm],
     queryFn: () => ingredientsApi.search(categorySearchTerm),
     enabled: selectedCategory !== 'All' && categorySearchTerm.length >= 2,
@@ -58,6 +138,7 @@ export default function SearchScreen() {
       name: item.name,
       score: item.overall_score,
       category: item.category || 'Food',
+      is_trusted: item.is_trusted,
     }))
     .sort((a: any, b: any) => (b.score || 0) - (a.score || 0))
     .slice(0, 12);
@@ -73,7 +154,7 @@ export default function SearchScreen() {
 
   // Fetch real scores for top rated ingredients
   const topRatedQueries = useQueries({
-    queries: TOP_RATED_NAMES.map((name) => ({
+    queries: TOP_RATED_NAMES.map(name => ({
       queryKey: ['ingredient', name],
       queryFn: () => ingredientsApi.getIngredient(name),
       staleTime: 1000 * 60 * 60, // Cache for 1 hour
@@ -82,7 +163,7 @@ export default function SearchScreen() {
 
   // Fetch real scores for watch list ingredients
   const watchListQueries = useQueries({
-    queries: WATCH_LIST_NAMES.map((name) => ({
+    queries: WATCH_LIST_NAMES.map(name => ({
       queryKey: ['ingredient', name],
       queryFn: () => ingredientsApi.getIngredient(name),
       staleTime: 1000 * 60 * 60, // Cache for 1 hour
@@ -91,24 +172,28 @@ export default function SearchScreen() {
 
   // Process fetched data into display format
   const topRatedData = topRatedQueries
-    .filter((q) => q.data)
-    .map((q) => ({
+    .filter(q => q.data)
+    .map(q => ({
       name: q.data!.name,
       score: q.data!.overall_score,
       category: (q.data as any)?.category || 'Food',
+      is_trusted: (q.data as IngredientScore)?.is_trusted,
     }))
     .sort((a, b) => (b.score || 0) - (a.score || 0));
 
   const watchListData = watchListQueries
-    .filter((q) => q.data)
-    .map((q) => ({
+    .filter(q => q.data)
+    .map(q => ({
       name: q.data!.name,
       score: q.data!.overall_score,
       category: (q.data as any)?.category || 'Food',
+      is_trusted: (q.data as IngredientScore)?.is_trusted,
     }))
     .sort((a, b) => (a.score || 0) - (b.score || 0));
 
-  const isLoadingLists = topRatedQueries.some((q) => q.isLoading) || watchListQueries.some((q) => q.isLoading);
+  const isLoadingLists =
+    topRatedQueries.some(q => q.isLoading) ||
+    watchListQueries.some(q => q.isLoading);
 
   // Use timeout ref for debouncing to avoid hook issues
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -137,7 +222,7 @@ export default function SearchScreen() {
   }, []);
 
   const handleIngredientPress = (name: string) => {
-    navigation.navigate('IngredientDetail', { name });
+    navigation.navigate('IngredientDetail', {name});
   };
 
   const getScoreLabel = (score: number | undefined) => {
@@ -147,22 +232,28 @@ export default function SearchScreen() {
     return 'Caution';
   };
 
-  const renderResultItem = ({ item }: { item: any }) => {
+  const renderResultItem = ({item}: {item: any}) => {
     const score = item.overall_score;
     const hasScore = score !== undefined && score !== null;
+    const categoryColors = getCategoryColor(item.category || 'Food');
+    const isTrusted = item.is_trusted === 1;
 
     return (
       <TouchableOpacity
         style={styles.resultCard}
         onPress={() => handleIngredientPress(item.name)}
         accessibilityLabel={`View details for ${item.name}`}
-        activeOpacity={0.7}
-      >
+        activeOpacity={0.7}>
         <View style={styles.resultLeft}>
-          <View style={[
-            styles.resultIcon,
-            { backgroundColor: hasScore ? getScoreBackgroundColor(score) : colors.primaryBackground }
-          ]}>
+          <View
+            style={[
+              styles.resultIcon,
+              {
+                backgroundColor: hasScore
+                  ? getScoreBackgroundColor(score)
+                  : colors.primaryBackground,
+              },
+            ]}>
             <Icon
               name="leaf"
               size={20}
@@ -172,10 +263,28 @@ export default function SearchScreen() {
         </View>
 
         <View style={styles.resultContent}>
-          <Text style={styles.ingredientName}>{item.name}</Text>
+          <View style={styles.resultNameRow}>
+            <Text style={styles.ingredientName}>{item.name}</Text>
+            {item.is_trusted !== undefined && (
+              <Icon
+                name={isTrusted ? 'checkmark-circle' : 'alert-circle-outline'}
+                size={14}
+                color={isTrusted ? colors.success : colors.warning}
+                style={styles.trustIcon}
+              />
+            )}
+          </View>
           {item.category && (
-            <View style={styles.categoryTag}>
-              <Text style={styles.categoryText}>
+            <View
+              style={[
+                styles.categoryTag,
+                {backgroundColor: categoryColors.backgroundColor},
+              ]}>
+              <Text
+                style={[
+                  styles.categoryText,
+                  {color: categoryColors.textColor},
+                ]}>
                 {item.category.replace(/_/g, ' ')}
               </Text>
             </View>
@@ -185,16 +294,20 @@ export default function SearchScreen() {
         <View style={styles.resultRight}>
           {hasScore ? (
             <View style={styles.scoreContainer}>
-              <Text style={[styles.scoreNumber, { color: getScoreColor(score) }]}>
+              <Text style={[styles.scoreNumber, {color: getScoreColor(score)}]}>
                 {score}
               </Text>
-              <Text style={[styles.scoreLabel, { color: getScoreColor(score) }]}>
+              <Text style={[styles.scoreLabel, {color: getScoreColor(score)}]}>
                 {getScoreLabel(score)}
               </Text>
             </View>
           ) : (
             <View style={styles.noScoreContainer}>
-              <Icon name="information-circle-outline" size={16} color={colors.textTertiary} />
+              <Icon
+                name="information-circle-outline"
+                size={16}
+                color={colors.textTertiary}
+              />
               <Text style={styles.noScoreText}>View</Text>
             </View>
           )}
@@ -204,23 +317,59 @@ export default function SearchScreen() {
     );
   };
 
-  const renderRatedCard = (item: { name: string; score: number; category: string }, isGood: boolean) => {
-    const scoreColor = item.score >= 70 ? colors.success : item.score >= 40 ? colors.warning : colors.error;
+  const renderRatedCard = (
+    item: {
+      name: string;
+      score: number;
+      category: string;
+      is_trusted?: number;
+    },
+    isGood: boolean
+  ) => {
+    const scoreColor =
+      item.score >= 70
+        ? colors.success
+        : item.score >= 40
+        ? colors.warning
+        : colors.error;
+    const categoryColors = getCategoryColor(item.category);
+    const isTrusted = item.is_trusted === 1;
+
     return (
       <TouchableOpacity
         key={item.name}
         style={[styles.ratedCard, isGood ? styles.goodCard : styles.cautionCard]}
         onPress={() => handleIngredientPress(item.name)}
-        activeOpacity={0.7}
-      >
-        <View style={[
-          styles.ratedScoreBadge,
-          { backgroundColor: scoreColor }
-        ]}>
-          <Text style={styles.ratedScoreText}>{item.score}</Text>
+        activeOpacity={0.7}>
+        <View style={styles.ratedCardHeader}>
+          <View style={[styles.ratedScoreBadge, {backgroundColor: scoreColor}]}>
+            <Text style={styles.ratedScoreText}>{item.score}</Text>
+          </View>
+          {item.is_trusted !== undefined && (
+            <Icon
+              name={isTrusted ? 'checkmark-circle' : 'alert-circle-outline'}
+              size={12}
+              color={isTrusted ? colors.success : colors.warning}
+            />
+          )}
         </View>
-        <Text style={styles.ratedName} numberOfLines={1}>{item.name}</Text>
-        <Text style={styles.ratedCategory}>{item.category}</Text>
+        <Text style={styles.ratedName} numberOfLines={1}>
+          {item.name}
+        </Text>
+        <View
+          style={[
+            styles.ratedCategoryBadge,
+            {backgroundColor: categoryColors.backgroundColor},
+          ]}>
+          <Text
+            style={[
+              styles.ratedCategoryText,
+              {color: categoryColors.textColor},
+            ]}
+            numberOfLines={1}>
+            {item.category.replace(/_/g, ' ')}
+          </Text>
+        </View>
       </TouchableOpacity>
     );
   };
@@ -229,8 +378,7 @@ export default function SearchScreen() {
     <ScrollView
       style={styles.emptyStateScroll}
       showsVerticalScrollIndicator={false}
-      contentContainerStyle={styles.emptyStateContent}
-    >
+      contentContainerStyle={styles.emptyStateContent}>
       {/* Top Rated Section */}
       <View style={styles.ratedSection}>
         <View style={styles.sectionHeader}>
@@ -250,9 +398,8 @@ export default function SearchScreen() {
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.ratedScroll}
-          >
-            {topRatedData.map((item) => renderRatedCard(item, true))}
+            contentContainerStyle={styles.ratedScroll}>
+            {topRatedData.map(item => renderRatedCard(item, true))}
           </ScrollView>
         )}
       </View>
@@ -276,9 +423,8 @@ export default function SearchScreen() {
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.ratedScroll}
-          >
-            {watchListData.map((item) => renderRatedCard(item, false))}
+            contentContainerStyle={styles.ratedScroll}>
+            {watchListData.map(item => renderRatedCard(item, false))}
           </ScrollView>
         )}
       </View>
@@ -289,28 +435,27 @@ export default function SearchScreen() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoriesScroll}
-        >
-          {CATEGORY_LABELS.map((label) => (
+          contentContainerStyle={styles.categoriesScroll}>
+          {CATEGORY_LABELS.map(label => (
             <TouchableOpacity
               key={label}
               style={[
                 styles.categoryChip,
                 selectedCategory === label && styles.categoryChipActive,
               ]}
-              onPress={() => handleCategorySelect(label)}
-            >
+              onPress={() => handleCategorySelect(label)}>
               <Icon
                 name={CATEGORY_DATA[label].icon}
                 size={16}
-                color={selectedCategory === label ? colors.white : colors.primary}
+                color={
+                  selectedCategory === label ? colors.white : colors.primary
+                }
               />
               <Text
                 style={[
                   styles.categoryChipText,
                   selectedCategory === label && styles.categoryChipTextActive,
-                ]}
-              >
+                ]}>
                 {label}
               </Text>
             </TouchableOpacity>
@@ -325,32 +470,83 @@ export default function SearchScreen() {
           {isLoadingCategory ? (
             <View style={styles.loadingCards}>
               <ActivityIndicator size="small" color={colors.primary} />
-              <Text style={styles.loadingText}>Loading {selectedCategory.toLowerCase()}...</Text>
+              <Text style={styles.loadingText}>
+                Loading {selectedCategory.toLowerCase()}...
+              </Text>
             </View>
           ) : categoryIngredients.length > 0 ? (
             <View style={styles.categoryGrid}>
-              {categoryIngredients.map((item) => (
-                <TouchableOpacity
-                  key={item.name}
-                  style={styles.categoryResultCard}
-                  onPress={() => handleIngredientPress(item.name)}
-                  activeOpacity={0.7}
-                >
-                  <View style={[
-                    styles.categoryResultScore,
-                    { backgroundColor: item.score >= 70 ? colors.success : item.score >= 40 ? colors.warning : colors.error }
-                  ]}>
-                    <Text style={styles.categoryResultScoreText}>{item.score}</Text>
-                  </View>
-                  <Text style={styles.categoryResultName} numberOfLines={1}>{item.name}</Text>
-                  <Text style={styles.categoryResultLabel}>{item.category}</Text>
-                </TouchableOpacity>
-              ))}
+              {categoryIngredients.map(item => {
+                const categoryColors = getCategoryColor(item.category);
+                const isTrusted = item.is_trusted === 1;
+                return (
+                  <TouchableOpacity
+                    key={item.name}
+                    style={styles.categoryResultCard}
+                    onPress={() => handleIngredientPress(item.name)}
+                    activeOpacity={0.7}>
+                    <View style={styles.categoryResultHeader}>
+                      <View
+                        style={[
+                          styles.categoryResultScore,
+                          {
+                            backgroundColor:
+                              item.score >= 70
+                                ? colors.success
+                                : item.score >= 40
+                                ? colors.warning
+                                : colors.error,
+                          },
+                        ]}>
+                        <Text style={styles.categoryResultScoreText}>
+                          {item.score}
+                        </Text>
+                      </View>
+                      {item.is_trusted !== undefined && (
+                        <Icon
+                          name={
+                            isTrusted
+                              ? 'checkmark-circle'
+                              : 'alert-circle-outline'
+                          }
+                          size={12}
+                          color={isTrusted ? colors.success : colors.warning}
+                        />
+                      )}
+                    </View>
+                    <Text
+                      style={styles.categoryResultName}
+                      numberOfLines={1}>
+                      {item.name}
+                    </Text>
+                    <View
+                      style={[
+                        styles.categoryResultCategoryBadge,
+                        {backgroundColor: categoryColors.backgroundColor},
+                      ]}>
+                      <Text
+                        style={[
+                          styles.categoryResultLabel,
+                          {color: categoryColors.textColor},
+                        ]}
+                        numberOfLines={1}>
+                        {item.category.replace(/_/g, ' ')}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           ) : (
             <View style={styles.noCategoryResults}>
-              <Icon name="leaf-outline" size={24} color={colors.textTertiary} />
-              <Text style={styles.noCategoryText}>No {selectedCategory.toLowerCase()} found</Text>
+              <Icon
+                name="leaf-outline"
+                size={24}
+                color={colors.textTertiary}
+              />
+              <Text style={styles.noCategoryText}>
+                No {selectedCategory.toLowerCase()} found
+              </Text>
             </View>
           )}
         </View>
@@ -361,19 +557,38 @@ export default function SearchScreen() {
         <Text style={styles.legendTitle}>Score Guide</Text>
         <View style={styles.legendContainer}>
           <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: colors.success }]} />
+            <View
+              style={[styles.legendDot, {backgroundColor: colors.success}]}
+            />
             <Text style={styles.legendLabel}>70-100</Text>
             <Text style={styles.legendText}>Good Choice</Text>
           </View>
           <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: colors.warning }]} />
+            <View
+              style={[styles.legendDot, {backgroundColor: colors.warning}]}
+            />
             <Text style={styles.legendLabel}>40-69</Text>
             <Text style={styles.legendText}>Moderate</Text>
           </View>
           <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: colors.error }]} />
+            <View style={[styles.legendDot, {backgroundColor: colors.error}]} />
             <Text style={styles.legendLabel}>0-39</Text>
             <Text style={styles.legendText}>Use Caution</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Trust Indicator Legend */}
+      <View style={styles.trustLegendSection}>
+        <Text style={styles.legendTitle}>Source Indicators</Text>
+        <View style={styles.trustLegendContainer}>
+          <View style={styles.trustLegendItem}>
+            <Icon name="checkmark-circle" size={18} color={colors.success} />
+            <Text style={styles.trustLegendText}>Researched - Verified scientific sources</Text>
+          </View>
+          <View style={styles.trustLegendItem}>
+            <Icon name="alert-circle-outline" size={18} color={colors.warning} />
+            <Text style={styles.trustLegendText}>Public Source - General information</Text>
           </View>
         </View>
       </View>
@@ -383,7 +598,8 @@ export default function SearchScreen() {
         <View style={styles.tipCard}>
           <Icon name="bulb-outline" size={20} color={colors.primary} />
           <Text style={styles.tipText}>
-            Search for any ingredient to see its health score and detailed analysis
+            Search for any ingredient to see its health score and detailed
+            analysis
           </Text>
         </View>
       </View>
@@ -404,8 +620,7 @@ export default function SearchScreen() {
         onPress={() => {
           setQuery('');
           setSearchTerm('');
-        }}
-      >
+        }}>
         <Text style={styles.clearButtonText}>Clear Search</Text>
       </TouchableOpacity>
     </View>
@@ -435,8 +650,7 @@ export default function SearchScreen() {
                 setSearchTerm('');
               }}
               style={styles.clearIcon}
-              accessibilityLabel="Clear search"
-            >
+              accessibilityLabel="Clear search">
               <Icon name="close-circle" size={20} color={colors.textTertiary} />
             </TouchableOpacity>
           )}
@@ -551,23 +765,28 @@ const styles = StyleSheet.create({
   resultContent: {
     flex: 1,
   },
+  resultNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
   ingredientName: {
     fontSize: typography.fontSize.base,
     fontWeight: typography.fontWeight.semiBold,
     color: colors.textPrimary,
     textTransform: 'capitalize',
-    marginBottom: spacing.xs,
+  },
+  trustIcon: {
+    marginLeft: spacing.xs,
   },
   categoryTag: {
     alignSelf: 'flex-start',
-    backgroundColor: colors.primaryBackground,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
     borderRadius: borderRadius.sm,
   },
   categoryText: {
     fontSize: typography.fontSize.xs,
-    color: colors.primary,
     textTransform: 'capitalize',
   },
   resultRight: {
@@ -650,7 +869,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   ratedCard: {
-    width: 100,
+    width: 110,
     padding: spacing.md,
     borderRadius: borderRadius.lg,
     alignItems: 'center',
@@ -666,13 +885,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.errorLight,
   },
+  ratedCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.sm,
+  },
   ratedScoreBadge: {
     width: 40,
     height: 40,
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.sm,
   },
   ratedScoreText: {
     color: colors.white,
@@ -684,11 +908,16 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.semiBold,
     color: colors.textPrimary,
     textAlign: 'center',
-    marginBottom: 2,
+    marginBottom: spacing.xs,
   },
-  ratedCategory: {
+  ratedCategoryBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+  },
+  ratedCategoryText: {
     fontSize: typography.fontSize.xs,
-    color: colors.textTertiary,
+    textTransform: 'capitalize',
   },
 
   // Categories
@@ -755,13 +984,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     ...shadows.sm,
   },
+  categoryResultHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.sm,
+  },
   categoryResultScore: {
     width: 44,
     height: 44,
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.sm,
   },
   categoryResultScoreText: {
     color: colors.white,
@@ -773,11 +1007,16 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.medium,
     color: colors.textPrimary,
     textAlign: 'center',
-    marginBottom: 2,
+    marginBottom: spacing.xs,
+  },
+  categoryResultCategoryBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
   },
   categoryResultLabel: {
     fontSize: typography.fontSize.xs,
-    color: colors.textTertiary,
+    textTransform: 'capitalize',
   },
   noCategoryResults: {
     alignItems: 'center',
@@ -828,6 +1067,29 @@ const styles = StyleSheet.create({
   legendText: {
     fontSize: typography.fontSize.xs,
     color: colors.textSecondary,
+  },
+
+  // Trust Legend Section
+  trustLegendSection: {
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.lg,
+  },
+  trustLegendContainer: {
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.lg,
+    padding: spacing.base,
+    ...shadows.sm,
+  },
+  trustLegendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  trustLegendText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
+    flex: 1,
   },
 
   // Tips Section

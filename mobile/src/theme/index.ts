@@ -27,6 +27,13 @@ export const colors = {
   scoreMedium: '#F59E0B',  // Orange - moderate
   scoreLow: '#EF4444',     // Red - concern
 
+  // Category Badge Colors
+  categoryDefault: '#F0FDFA',
+  categorySweeteners: '#FEF3C7', // Amber/Orange background
+  categorySweetenersText: '#D97706',
+  categoryFatsOils: '#DBEAFE', // Blue background
+  categoryFatsOilsText: '#2563EB',
+
   // Neutral Colors
   white: '#FFFFFF',
   background: '#F8FAFC',
@@ -151,6 +158,49 @@ export const getScoreBackgroundColor = (score: number): string => {
   return colors.errorLight;
 };
 
+// Helper function to get confidence level color
+export const getConfidenceColor = (
+  confidenceLevel: 'High' | 'Medium' | 'Low' | 'Emerging' | string
+): string => {
+  switch (confidenceLevel) {
+    case 'High':
+      return colors.success;
+    case 'Medium':
+      return colors.warning;
+    case 'Low':
+    case 'Emerging':
+    default:
+      return colors.textTertiary;
+  }
+};
+
+// Helper function to get category badge colors
+export const getCategoryColor = (
+  category: string
+): {backgroundColor: string; textColor: string} => {
+  const normalizedCategory = category?.toLowerCase().replace(/[_\s&]+/g, '') || '';
+
+  if (normalizedCategory.includes('sweetener')) {
+    return {
+      backgroundColor: colors.categorySweeteners,
+      textColor: colors.categorySweetenersText,
+    };
+  }
+
+  if (normalizedCategory.includes('fat') || normalizedCategory.includes('oil')) {
+    return {
+      backgroundColor: colors.categoryFatsOils,
+      textColor: colors.categoryFatsOilsText,
+    };
+  }
+
+  // Default category color
+  return {
+    backgroundColor: colors.categoryDefault,
+    textColor: colors.primary,
+  };
+};
+
 export default {
   colors,
   typography,
@@ -159,4 +209,6 @@ export default {
   shadows,
   getScoreColor,
   getScoreBackgroundColor,
+  getConfidenceColor,
+  getCategoryColor,
 };

@@ -28,6 +28,8 @@ from app.api.schemas import (
     UserCreate, UserLogin, AuthResponse, UserResponse,
     UserProfileUpdate, UserProfileResponse,
     IngredientScoreResponse, IngredientSearchResult, IngredientSearchResponse,
+    IngredientDetailedResponse, IngredientListItem, IngredientListResponse,
+    HealthScores, HealthScoreDetail,
     LogCreate, LogUpdate, LogResponse, LogListResponse, SymptomsOutput,
     PredictionCreate, PredictionResponse, PredictionListResponse,
     InsightsResponse, TriggerInfo,
@@ -200,6 +202,11 @@ async def update_current_user_profile(
 async def search_ingredients(
     q: str = Query(..., min_length=2, description="Search query"),
     limit: int = Query(10, ge=1, le=50, description="Maximum number of results"),
+    category: str = Query(None, description="Filter by category (e.g., 'Sweeteners', 'Fats & Oils')"),
+    sort_by: str = Query(
+        None,
+        description="Sort by health score: overall, blood_sugar, inflammation, gut, disease_links"
+    ),
     db: Session = Depends(get_db)
 ):
     """
@@ -209,38 +216,79 @@ async def search_ingredients(
     - Checks cached ingredients in DB first
     - Falls back to static ingredient list
     - Returns match_score based on how closely the query matches
-    - Results sorted by match_score descending
+    - Results sorted by match_score descending (unless sort_by is specified)
+    - Optional category filter to narrow results
+    - Optional sort_by to order by health impact scores
     """
     from app.data.common_ingredients import get_all_ingredients, get_ingredient_category
 
     query_lower = q.lower().strip()
     results = []
 
-    # First, check cached ingredients in the database
-    db_ingredients = db.query(IngredientScore.ingredient_name).all()
-    db_ingredient_names = {row.ingredient_name.lower() for row in db_ingredients}
+    # Build query for DB ingredients with optional category filter
+    db_query = db.query(IngredientScore)
+    if category:
+        db_query = db_query.filter(IngredientScore.category == category)
 
-    # Combine DB ingredients with static list (avoiding duplicates)
-    static_ingredients = get_all_ingredients()
-    all_ingredients = list(db_ingredient_names.union(
-        ing.lower() for ing in static_ingredients
-    ))
+    db_ingredients = db_query.all()
+
+    # Build a map of ingredient name to DB record for score lookups
+    db_ingredient_map = {row.ingredient_name.lower(): row for row in db_ingredients}
+    db_ingredient_names = set(db_ingredient_map.keys())
+
+    # Get static ingredients (only if no category filter or handle differently)
+    if category:
+        # When filtering by category, only use DB ingredients
+        all_ingredients = list(db_ingredient_names)
+    else:
+        # Combine DB ingredients with static list (avoiding duplicates)
+        static_ingredients = get_all_ingredients()
+        all_ingredients = list(db_ingredient_names.union(
+            ing.lower() for ing in static_ingredients
+        ))
 
     # Calculate match scores for each ingredient
     for ingredient in all_ingredients:
         score = _calculate_match_score(query_lower, ingredient)
         if score > 0:
-            category = get_ingredient_category(ingredient)
+            # Get category from DB if available, otherwise from static data
+            if ingredient in db_ingredient_map:
+                ing_category = db_ingredient_map[ingredient].category
+            else:
+                ing_category = get_ingredient_category(ingredient)
+
             results.append(
                 IngredientSearchResult(
                     ingredient_name=ingredient,
                     match_score=score,
-                    category=category
+                    category=ing_category
                 )
             )
 
-    # Sort by match_score descending
-    results.sort(key=lambda x: x.match_score, reverse=True)
+    # Apply sorting based on sort_by parameter
+    valid_sort_options = ['overall', 'blood_sugar', 'inflammation', 'gut', 'disease_links']
+    if sort_by and sort_by in valid_sort_options:
+        # Sort by the specified health score (descending), putting ingredients without scores last
+        score_field_map = {
+            'overall': 'overall_score',
+            'blood_sugar': 'blood_sugar_impact',
+            'inflammation': 'inflammation_potential',
+            'gut': 'gut_impact',
+            'disease_links': 'disease_links'
+        }
+        field_name = score_field_map[sort_by]
+
+        def get_sort_score(result):
+            ing_name = result.ingredient_name.lower()
+            if ing_name in db_ingredient_map:
+                score_val = getattr(db_ingredient_map[ing_name], field_name, None)
+                return (0, -(score_val or 0))  # Sort None/0 to bottom, higher scores first
+            return (1, 0)  # Ingredients without DB data go to the end
+
+        results.sort(key=get_sort_score)
+    else:
+        # Default: sort by match_score descending
+        results.sort(key=lambda x: x.match_score, reverse=True)
 
     # Apply limit
     limited_results = results[:limit]
@@ -299,14 +347,92 @@ def _is_subsequence(query: str, ingredient: str) -> bool:
     return query_idx == len(query)
 
 
-@router.get("/ingredient/{name}", response_model=IngredientScoreResponse, tags=["Ingredients"])
+def _build_health_score_detail(details: dict) -> HealthScoreDetail:
+    """Build a HealthScoreDetail from a details dict.
+
+    Handles both the new format with confidence_level and legacy format.
+    """
+    if not details:
+        return None
+
+    return HealthScoreDetail(
+        score=details.get('score'),
+        confidence=details.get('confidence_level') or details.get('confidence'),
+        description=details.get('description')
+    )
+
+
+def _build_ingredient_detailed_response(cached: IngredientScore) -> IngredientDetailedResponse:
+    """Build a detailed ingredient response from a database record.
+
+    Constructs the health_scores object from individual detail fields
+    while maintaining backward compatibility with legacy fields.
+    """
+    # Build health scores from detail fields
+    health_scores = HealthScores(
+        blood_sugar=_build_health_score_detail(cached.blood_sugar_details),
+        inflammation=_build_health_score_detail(cached.inflammation_details),
+        gut_impact=_build_health_score_detail(cached.gut_impact_details),
+        disease_links=_build_health_score_detail(cached.disease_links_details),
+        hormonal=_build_health_score_detail(cached.hormonal_relevance)
+    )
+
+    # Fill in scores from top-level fields if details don't have them
+    if health_scores.blood_sugar and health_scores.blood_sugar.score is None:
+        health_scores.blood_sugar.score = cached.blood_sugar_impact
+    elif health_scores.blood_sugar is None and cached.blood_sugar_impact is not None:
+        health_scores.blood_sugar = HealthScoreDetail(score=cached.blood_sugar_impact)
+
+    if health_scores.inflammation and health_scores.inflammation.score is None:
+        health_scores.inflammation.score = cached.inflammation_potential
+    elif health_scores.inflammation is None and cached.inflammation_potential is not None:
+        health_scores.inflammation = HealthScoreDetail(score=cached.inflammation_potential)
+
+    if health_scores.gut_impact and health_scores.gut_impact.score is None:
+        health_scores.gut_impact.score = cached.gut_impact
+    elif health_scores.gut_impact is None and cached.gut_impact is not None:
+        health_scores.gut_impact = HealthScoreDetail(score=cached.gut_impact)
+
+    if health_scores.disease_links and health_scores.disease_links.score is None:
+        health_scores.disease_links.score = cached.disease_links
+    elif health_scores.disease_links is None and cached.disease_links is not None:
+        health_scores.disease_links = HealthScoreDetail(score=cached.disease_links)
+
+    return IngredientDetailedResponse(
+        name=cached.ingredient_name,
+        category=cached.category,
+        overall_score=cached.overall_score,
+        is_trusted=bool(cached.is_trusted),
+        health_scores=health_scores,
+        evidence_confidence=cached.evidence_confidence,
+        sources=cached.sources,
+        # Legacy fields for backward compatibility
+        blood_sugar_impact=cached.blood_sugar_impact,
+        inflammation_potential=cached.inflammation_potential,
+        gut_impact=cached.gut_impact,
+        disease_links=cached.disease_links,
+        hormonal_relevance=cached.hormonal_relevance
+    )
+
+
+@router.get("/ingredient/{name}", response_model=IngredientDetailedResponse, tags=["Ingredients"])
 async def get_ingredient_score(name: str, db: Session = Depends(get_db)):
     """
-    Get health scores for an ingredient.
+    Get detailed health scores for an ingredient.
 
-    - Checks cache first
-    - If not cached, calls scoring service
-    - Returns health impact scores
+    Returns comprehensive health information including:
+    - Overall score and category
+    - Health scores with confidence levels and descriptions for:
+      - Blood sugar impact
+      - Inflammation potential
+      - Gut impact
+      - Disease links
+      - Hormonal relevance
+    - Trust indicator (is_trusted)
+    - Source citations
+
+    Legacy fields (blood_sugar_impact, inflammation_potential, etc.) are
+    included for backward compatibility with existing clients.
 
     Note: Scoring service is a stub - implement in services/ingredient_scorer.py
     """
@@ -319,16 +445,7 @@ async def get_ingredient_score(name: str, db: Session = Depends(get_db)):
     ).first()
 
     if cached:
-        return IngredientScoreResponse(
-            name=cached.ingredient_name,
-            blood_sugar_impact=cached.blood_sugar_impact,
-            inflammation_potential=cached.inflammation_potential,
-            gut_impact=cached.gut_impact,
-            overall_score=cached.overall_score,
-            hormonal_relevance=cached.hormonal_relevance,
-            evidence_confidence=cached.evidence_confidence,
-            sources=cached.sources
-        )
+        return _build_ingredient_detailed_response(cached)
 
     # Not cached - call scoring service
     scorer = IngredientScorer()
@@ -353,17 +470,128 @@ async def get_ingredient_score(name: str, db: Session = Depends(get_db)):
     )
     db.add(cached_score)
     db.commit()
+    db.refresh(cached_score)
 
-    return IngredientScoreResponse(
-        name=normalized_name,
-        blood_sugar_impact=scores.blood_sugar_impact,
-        inflammation_potential=scores.inflammation_potential,
-        gut_impact=scores.gut_impact,
-        overall_score=scores.overall_score,
-        hormonal_relevance=scores.hormonal_relevance,
-        evidence_confidence=scores.evidence_confidence,
-        sources=scores.sources
+    return _build_ingredient_detailed_response(cached_score)
+
+
+@router.get("/ingredients/list", response_model=IngredientListResponse, tags=["Ingredients"])
+async def list_ingredients(
+    category: str = Query(None, description="Filter by category (e.g., 'Sweeteners', 'Fats & Oils')"),
+    sort_by: str = Query(
+        "overall",
+        description="Sort by: overall, blood_sugar, inflammation, gut, disease_links, name"
+    ),
+    sort_order: str = Query("desc", description="Sort order: asc or desc"),
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
+    db: Session = Depends(get_db)
+):
+    """
+    List all ingredients with optional filtering and sorting.
+
+    Returns paginated list of ingredients from the database with:
+    - Category classification
+    - Overall health score
+    - Individual health impact scores
+    - Trust indicator
+
+    Use this endpoint to browse the ingredient database or build
+    category-specific ingredient lists for the UI.
+    """
+    from math import ceil
+
+    # Build base query
+    query = db.query(IngredientScore)
+
+    # Apply category filter if provided
+    if category:
+        query = query.filter(IngredientScore.category == category)
+
+    # Get total count before pagination
+    total = query.count()
+
+    # Apply sorting
+    sort_field_map = {
+        'overall': IngredientScore.overall_score,
+        'blood_sugar': IngredientScore.blood_sugar_impact,
+        'inflammation': IngredientScore.inflammation_potential,
+        'gut': IngredientScore.gut_impact,
+        'disease_links': IngredientScore.disease_links,
+        'name': IngredientScore.ingredient_name
+    }
+
+    sort_field = sort_field_map.get(sort_by, IngredientScore.overall_score)
+
+    if sort_order.lower() == 'asc':
+        # For ascending, put nulls last
+        query = query.order_by(sort_field.asc().nullslast())
+    else:
+        # For descending, put nulls last
+        query = query.order_by(sort_field.desc().nullslast())
+
+    # Apply pagination
+    offset = (page - 1) * page_size
+    ingredients = query.offset(offset).limit(page_size).all()
+
+    # Calculate total pages
+    total_pages = ceil(total / page_size) if total > 0 else 1
+
+    # Build response items
+    items = [
+        IngredientListItem(
+            name=ing.ingredient_name,
+            category=ing.category,
+            overall_score=ing.overall_score,
+            is_trusted=bool(ing.is_trusted),
+            blood_sugar_impact=ing.blood_sugar_impact,
+            inflammation_potential=ing.inflammation_potential,
+            gut_impact=ing.gut_impact,
+            disease_links=ing.disease_links
+        )
+        for ing in ingredients
+    ]
+
+    return IngredientListResponse(
+        ingredients=items,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages
     )
+
+
+@router.get("/ingredients/categories", tags=["Ingredients"])
+async def list_ingredient_categories(db: Session = Depends(get_db)):
+    """
+    Get all available ingredient categories.
+
+    Returns a list of unique category names with ingredient counts.
+    Useful for building category filter UI components.
+    """
+    from sqlalchemy import func
+
+    # Query distinct categories with counts
+    results = db.query(
+        IngredientScore.category,
+        func.count(IngredientScore.id).label('count')
+    ).filter(
+        IngredientScore.category.isnot(None)
+    ).group_by(
+        IngredientScore.category
+    ).order_by(
+        IngredientScore.category
+    ).all()
+
+    categories = [
+        {"name": row.category, "count": row.count}
+        for row in results
+    ]
+
+    return {
+        "categories": categories,
+        "total": len(categories)
+    }
 
 
 # ============================================================

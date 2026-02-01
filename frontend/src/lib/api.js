@@ -64,11 +64,41 @@ export const ingredientApi = {
     return response.data;
   },
 
-  // Autocomplete search
-  search: async (query, limit = 10) => {
-    const response = await api.get('/ingredient/search', {
-      params: { q: query, limit }
-    });
+  // Autocomplete search with optional category and sort filters
+  search: async (query, limit = 10, options = {}) => {
+    const params = { q: query, limit };
+    if (options.category) {
+      params.category = options.category;
+    }
+    if (options.sort_by) {
+      params.sort_by = options.sort_by;
+    }
+    const response = await api.get('/ingredient/search', { params });
+    return response.data;
+  },
+
+  // Get list of all ingredients with optional filters
+  getIngredientsList: async (options = {}) => {
+    const params = {};
+    if (options.category) {
+      params.category = options.category;
+    }
+    if (options.sort_by) {
+      params.sort_by = options.sort_by;
+    }
+    if (options.limit) {
+      params.limit = options.limit;
+    }
+    if (options.offset) {
+      params.offset = options.offset;
+    }
+    const response = await api.get('/ingredient/list', { params });
+    return response.data;
+  },
+
+  // Get list of available categories
+  getCategories: async () => {
+    const response = await api.get('/ingredient/categories');
     return response.data;
   },
 };

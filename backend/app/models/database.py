@@ -225,30 +225,47 @@ class IngredientScore(Base):
     """
     Cached health scores for ingredients.
     Populated by the scoring service.
+
+    Includes comprehensive health research data with detailed descriptions
+    for each health category (blood sugar, inflammation, gut, disease links, hormonal).
     """
     __tablename__ = "ingredient_scores"
 
     id = Column(GUID(), primary_key=True, default=uuid.uuid4)
     ingredient_name = Column(String(255), unique=True, nullable=False, index=True)
 
+    # Category classification (e.g., "Sweeteners", "Fats & Oils")
+    category = Column(String(100), nullable=True, index=True)
+
     # Health impact scores (0-100 scale)
-    # Higher = better for most metrics, except inflammation (higher = worse)
+    # Higher = better for most metrics, except inflammation (higher = more inflammatory)
     blood_sugar_impact = Column(Integer, nullable=True)  # 0-100
     inflammation_potential = Column(Integer, nullable=True)  # 0-100 (higher = more inflammatory)
     gut_impact = Column(Integer, nullable=True)  # 0-100
+    disease_links = Column(Integer, nullable=True)  # 0-100 (higher = lower disease risk)
     overall_score = Column(Integer, nullable=True)  # 0-100
+
+    # Detailed JSON fields for each health category
+    # Each contains: score, confidence, confidence_level, description
+    blood_sugar_details = Column(JSONType(), nullable=True)
+    inflammation_details = Column(JSONType(), nullable=True)
+    gut_impact_details = Column(JSONType(), nullable=True)
+    disease_links_details = Column(JSONType(), nullable=True)
 
     # Hormonal relevance - can store detailed breakdown
     hormonal_relevance = Column(JSONType(), nullable=True)
-    # Example: {"score": 70, "estrogen_impact": "low", "insulin_impact": "moderate"}
+    # Example: {"score": 70, "confidence": 60, "confidence_level": "mixed", "description": "..."}
 
-    # Evidence quality
+    # Evidence quality (overall confidence)
     evidence_confidence = Column(String(20), nullable=True)
     # Values: "high", "medium", "low"
 
     # Source citations
     sources = Column(JSONType(), default=list)
-    # Example: [{"name": "USDA", "url": "..."}, {"name": "PubMed", "id": "12345"}]
+    # Example: [{"url": "https://...", "type": "research"}]
+
+    # Trust indicator (1 = fully researched, 0 = public/less trusted sources)
+    is_trusted = Column(Integer, default=0)
 
     cached_at = Column(DateTime, default=utc_now)
     updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)

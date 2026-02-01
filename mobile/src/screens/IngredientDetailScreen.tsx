@@ -1,28 +1,50 @@
-import React from 'react';
+import React, {useState} from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   ActivityIndicator,
+  TouchableOpacity,
+  Linking,
 } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
-import { RouteProp, useRoute } from '@react-navigation/native';
+import {useQuery} from '@tanstack/react-query';
+import {RouteProp, useRoute} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { ingredientsApi } from '../lib/api';
-import { HomeStackParamList } from '../navigation/RootNavigator';
-import { colors, typography, spacing, borderRadius, getScoreColor } from '../theme';
+import {ingredientsApi, HealthScoreDetail} from '../lib/api';
+import {HomeStackParamList} from '../navigation/RootNavigator';
+import {
+  colors,
+  typography,
+  spacing,
+  borderRadius,
+  getScoreColor,
+  getConfidenceColor,
+  getCategoryColor,
+} from '../theme';
 
 type RouteProps = RouteProp<HomeStackParamList, 'IngredientDetail'>;
 
 export default function IngredientDetailScreen() {
   const route = useRoute<RouteProps>();
-  const { name } = route.params;
+  const {name} = route.params;
 
-  const { data: ingredient, isLoading } = useQuery({
+  // Track expanded sections
+  const [expandedSections, setExpandedSections] = useState<
+    Record<string, boolean>
+  >({});
+
+  const {data: ingredient, isLoading} = useQuery({
     queryKey: ['ingredient', name],
     queryFn: () => ingredientsApi.getIngredient(name),
   });
+
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section],
+    }));
+  };
 
   if (isLoading) {
     return (
@@ -43,19 +65,42 @@ export default function IngredientDetailScreen() {
     );
   }
 
+  // Helper to get score detail from nested health_scores or direct *_details fields
+  const getScoreDetail = (
+    key: 'blood_sugar' | 'inflammation' | 'gut_impact' | 'disease_links'
+  ): HealthScoreDetail | undefined => {
+    // Try nested health_scores first
+    if (ingredient.health_scores?.[key]) {
+      return ingredient.health_scores[key];
+    }
+    // Fallback to direct *_details fields
+    const detailsKey = `${key}_details` as keyof typeof ingredient;
+    return ingredient[detailsKey] as HealthScoreDetail | undefined;
+  };
+
   const getLocalScoreColor = (score: number, inverse = false) => {
     const effectiveScore = inverse ? 100 - score : score;
     return getScoreColor(effectiveScore);
   };
 
-  const getConfidenceColor = (confidence: string) => {
-    switch (confidence) {
-      case 'high':
-        return colors.success;
-      case 'medium':
-        return colors.warning;
-      default:
-        return colors.error;
+  // For inflammation: display as anti-inflammatory score (100 - raw value)
+  const getInflammationDisplayScore = () => {
+    const detail = getScoreDetail('inflammation');
+    if (detail?.score !== undefined) {
+      return 100 - detail.score;
+    }
+    return 100 - (ingredient.inflammation_potential || 0);
+  };
+
+  const isTrusted = ingredient.is_trusted === 1;
+  const category = ingredient.category || 'Food';
+  const categoryColors = getCategoryColor(category);
+
+  const handleSourcePress = (url?: string) => {
+    if (url) {
+      Linking.openURL(url).catch(() => {
+        // Silently fail if URL cannot be opened
+      });
     }
   };
 
@@ -63,13 +108,40 @@ export default function IngredientDetailScreen() {
     <ScrollView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
+        {/* Category Badge */}
+        <View
+          style={[
+            styles.categoryBadge,
+            {backgroundColor: categoryColors.backgroundColor},
+          ]}>
+          <Text style={[styles.categoryBadgeText, {color: categoryColors.textColor}]}>
+            {category.replace(/_/g, ' ')}
+          </Text>
+        </View>
+
         <Text style={styles.ingredientName}>{ingredient.name}</Text>
+
+        {/* Trust Indicator */}
+        <View style={styles.trustIndicator}>
+          <Icon
+            name={isTrusted ? 'checkmark-circle' : 'alert-circle-outline'}
+            size={16}
+            color={isTrusted ? colors.success : colors.warning}
+          />
+          <Text
+            style={[
+              styles.trustText,
+              {color: isTrusted ? colors.success : colors.warning},
+            ]}>
+            {isTrusted ? 'Researched' : 'Public Source'}
+          </Text>
+        </View>
+
         <View
           style={[
             styles.overallScore,
-            { backgroundColor: getScoreColor(ingredient.overall_score) },
-          ]}
-        >
+            {backgroundColor: getScoreColor(ingredient.overall_score)},
+          ]}>
           <Text style={styles.overallScoreValue}>
             {ingredient.overall_score}
           </Text>
@@ -81,33 +153,83 @@ export default function IngredientDetailScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Health Score Breakdown</Text>
 
-        <ScoreBar
+        <ExpandableScoreBar
           label="Blood Sugar Impact"
           value={ingredient.blood_sugar_impact}
           color={getLocalScoreColor(ingredient.blood_sugar_impact)}
           description="Higher is better (less blood sugar spike)"
+          detail={getScoreDetail('blood_sugar')}
+          isExpanded={expandedSections.blood_sugar}
+          onToggle={() => toggleSection('blood_sugar')}
         />
 
-        <ScoreBar
-          label="Inflammation"
-          value={ingredient.inflammation_potential}
-          color={getLocalScoreColor(ingredient.inflammation_potential, true)}
-          description="Lower is better (less inflammatory)"
-          inverse
+        <ExpandableScoreBar
+          label="Anti-inflammatory"
+          value={getInflammationDisplayScore()}
+          color={getLocalScoreColor(getInflammationDisplayScore())}
+          description="Higher is better (less inflammatory)"
+          detail={getScoreDetail('inflammation')}
+          isExpanded={expandedSections.inflammation}
+          onToggle={() => toggleSection('inflammation')}
+          displayLabel="Anti-inflammatory Score"
         />
 
-        <ScoreBar
+        <ExpandableScoreBar
           label="Gut Health"
           value={ingredient.gut_impact}
           color={getLocalScoreColor(ingredient.gut_impact)}
           description="Higher is better (more gut-friendly)"
+          detail={getScoreDetail('gut_impact')}
+          isExpanded={expandedSections.gut_impact}
+          onToggle={() => toggleSection('gut_impact')}
         />
+
+        {/* Disease Links Score - new category */}
+        {(ingredient.disease_links !== undefined ||
+          getScoreDetail('disease_links')) && (
+          <ExpandableScoreBar
+            label="Disease Prevention"
+            value={ingredient.disease_links ?? getScoreDetail('disease_links')?.score ?? 0}
+            color={getLocalScoreColor(
+              ingredient.disease_links ?? getScoreDetail('disease_links')?.score ?? 0
+            )}
+            description="Higher is better (fewer disease associations)"
+            detail={getScoreDetail('disease_links')}
+            isExpanded={expandedSections.disease_links}
+            onToggle={() => toggleSection('disease_links')}
+          />
+        )}
       </View>
 
       {/* Hormonal Impact */}
       {ingredient.hormonal_relevance && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Hormonal Impact</Text>
+          <TouchableOpacity
+            style={styles.sectionHeaderTouchable}
+            onPress={() => toggleSection('hormonal')}
+            accessibilityLabel="Toggle hormonal impact details">
+            <Text style={styles.sectionTitle}>Hormonal Impact</Text>
+            {ingredient.hormonal_relevance.confidence_level && (
+              <View
+                style={[
+                  styles.confidenceBadgeSmall,
+                  {
+                    backgroundColor: getConfidenceColor(
+                      ingredient.hormonal_relevance.confidence_level
+                    ),
+                  },
+                ]}>
+                <Text style={styles.confidenceBadgeSmallText}>
+                  {ingredient.hormonal_relevance.confidence_level}
+                </Text>
+              </View>
+            )}
+            <Icon
+              name={expandedSections.hormonal ? 'chevron-up' : 'chevron-down'}
+              size={20}
+              color={colors.textSecondary}
+            />
+          </TouchableOpacity>
           <View style={styles.hormonalCard}>
             <View style={styles.hormonalRow}>
               <Text style={styles.hormonalLabel}>Insulin Impact</Text>
@@ -121,17 +243,34 @@ export default function IngredientDetailScreen() {
                 {ingredient.hormonal_relevance.estrogen_impact}
               </Text>
             </View>
-            <View style={[styles.hormonalRow, { borderBottomWidth: 0 }]}>
+            <View style={[styles.hormonalRow, {borderBottomWidth: 0}]}>
               <Text style={styles.hormonalLabel}>Cortisol Impact</Text>
               <Text style={styles.hormonalValue}>
                 {ingredient.hormonal_relevance.cortisol_impact}
               </Text>
             </View>
-            {ingredient.hormonal_relevance.details && (
-              <Text style={styles.hormonalDetails}>
-                {ingredient.hormonal_relevance.details}
-              </Text>
+            {/* Expanded details */}
+            {expandedSections.hormonal && (
+              <>
+                {(ingredient.hormonal_relevance.description ||
+                  ingredient.hormonal_relevance.details) && (
+                  <View style={styles.expandedDetails}>
+                    <Text style={styles.expandedDetailsText}>
+                      {ingredient.hormonal_relevance.description ||
+                        ingredient.hormonal_relevance.details}
+                    </Text>
+                  </View>
+                )}
+              </>
             )}
+            {!expandedSections.hormonal &&
+              (ingredient.hormonal_relevance.details ||
+                ingredient.hormonal_relevance.description) && (
+                <Text style={styles.hormonalDetails} numberOfLines={2}>
+                  {ingredient.hormonal_relevance.description ||
+                    ingredient.hormonal_relevance.details}
+                </Text>
+              )}
           </View>
         </View>
       )}
@@ -147,11 +286,14 @@ export default function IngredientDetailScreen() {
                 styles.confidenceBadge,
                 {
                   backgroundColor: getConfidenceColor(
-                    ingredient.evidence_confidence,
+                    ingredient.evidence_confidence === 'high'
+                      ? 'High'
+                      : ingredient.evidence_confidence === 'medium'
+                      ? 'Medium'
+                      : 'Low'
                   ),
                 },
-              ]}
-            >
+              ]}>
               <Text style={styles.confidenceText}>
                 {ingredient.evidence_confidence}
               </Text>
@@ -162,43 +304,113 @@ export default function IngredientDetailScreen() {
             <View style={styles.sources}>
               <Text style={styles.sourcesTitle}>Sources</Text>
               {ingredient.sources.map((source, idx) => (
-                <Text key={idx} style={styles.sourceItem}>
-                  • {source.name}
-                </Text>
+                <TouchableOpacity
+                  key={idx}
+                  style={styles.sourceItemContainer}
+                  onPress={() => handleSourcePress(source.url)}
+                  disabled={!source.url}
+                  accessibilityLabel={`Source: ${source.name}${
+                    source.url ? ', tap to open' : ''
+                  }`}>
+                  <Icon
+                    name={source.url ? 'link-outline' : 'document-text-outline'}
+                    size={14}
+                    color={source.url ? colors.primary : colors.textTertiary}
+                  />
+                  <Text
+                    style={[
+                      styles.sourceItem,
+                      source.url && styles.sourceItemLink,
+                    ]}>
+                    {source.name}
+                  </Text>
+                  {source.url && (
+                    <Icon
+                      name="open-outline"
+                      size={12}
+                      color={colors.primary}
+                    />
+                  )}
+                </TouchableOpacity>
               ))}
             </View>
           )}
         </View>
       </View>
 
-      <View style={{ height: 40 }} />
+      <View style={{height: 40}} />
     </ScrollView>
   );
 }
 
-function ScoreBar({
+function ExpandableScoreBar({
   label,
   value,
   color,
   description,
-  inverse,
+  detail,
+  isExpanded,
+  onToggle,
+  displayLabel,
 }: {
   label: string;
   value: number;
   color: string;
   description: string;
-  inverse?: boolean;
+  detail?: HealthScoreDetail;
+  isExpanded?: boolean;
+  onToggle?: () => void;
+  displayLabel?: string;
 }) {
+  const hasDetail = detail?.description || detail?.confidence_level;
+
   return (
     <View style={styles.scoreBar}>
-      <View style={styles.scoreHeader}>
-        <Text style={styles.scoreLabel}>{label}</Text>
-        <Text style={[styles.scoreValue, { color }]}>{value}/100</Text>
-      </View>
+      <TouchableOpacity
+        style={styles.scoreHeader}
+        onPress={hasDetail ? onToggle : undefined}
+        disabled={!hasDetail}
+        accessibilityLabel={`${label}: ${value} out of 100${
+          hasDetail ? ', tap for details' : ''
+        }`}>
+        <View style={styles.scoreLabelRow}>
+          <Text style={styles.scoreLabel}>{displayLabel || label}</Text>
+          {detail?.confidence_level && (
+            <View
+              style={[
+                styles.confidenceBadgeSmall,
+                {backgroundColor: getConfidenceColor(detail.confidence_level)},
+              ]}>
+              <Text style={styles.confidenceBadgeSmallText}>
+                {detail.confidence_level}
+              </Text>
+            </View>
+          )}
+        </View>
+        <View style={styles.scoreValueRow}>
+          <Text style={[styles.scoreValue, {color}]}>{value}/100</Text>
+          {hasDetail && (
+            <Icon
+              name={isExpanded ? 'chevron-up' : 'chevron-down'}
+              size={16}
+              color={colors.textSecondary}
+            />
+          )}
+        </View>
+      </TouchableOpacity>
       <View style={styles.barContainer}>
-        <View style={[styles.barFill, { width: `${value}%`, backgroundColor: color }]} />
+        <View
+          style={[styles.barFill, {width: `${value}%`, backgroundColor: color}]}
+        />
       </View>
       <Text style={styles.scoreDescription}>{description}</Text>
+
+      {/* Expanded Details */}
+      {isExpanded && detail?.description && (
+        <View style={styles.expandedDetails}>
+          <Text style={styles.expandedDetailsText}>{detail.description}</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -238,12 +450,34 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     alignItems: 'center',
   },
+  categoryBadge: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
+    marginBottom: spacing.sm,
+  },
+  categoryBadgeText: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.semiBold,
+    textTransform: 'capitalize',
+  },
   ingredientName: {
     fontSize: typography.fontSize['3xl'],
     fontWeight: typography.fontWeight.bold,
     color: colors.textPrimary,
     textTransform: 'capitalize',
+    marginBottom: spacing.xs,
+    textAlign: 'center',
+  },
+  trustIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: spacing.base,
+    gap: spacing.xs,
+  },
+  trustText: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.medium,
   },
   overallScore: {
     width: 100,
@@ -266,11 +500,18 @@ const styles = StyleSheet.create({
     marginTop: spacing.base,
     padding: spacing.lg,
   },
+  sectionHeaderTouchable: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.base,
+    gap: spacing.sm,
+  },
   sectionTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.semiBold,
     color: colors.textPrimary,
     marginBottom: spacing.base,
+    flex: 1,
   },
   scoreBar: {
     marginBottom: spacing.lg,
@@ -278,12 +519,24 @@ const styles = StyleSheet.create({
   scoreHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: spacing.sm,
+  },
+  scoreLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flex: 1,
   },
   scoreLabel: {
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.medium,
     color: colors.textPrimary,
+  },
+  scoreValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   scoreValue: {
     fontSize: typography.fontSize.sm,
@@ -303,6 +556,29 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.xs,
     color: colors.textTertiary,
     marginTop: spacing.xs,
+  },
+  expandedDetails: {
+    marginTop: spacing.md,
+    padding: spacing.md,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
+  },
+  expandedDetailsText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: typography.fontSize.sm * 1.5,
+  },
+  confidenceBadgeSmall: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: borderRadius.full,
+  },
+  confidenceBadgeSmallText: {
+    fontSize: typography.fontSize.xs,
+    color: colors.white,
+    fontWeight: typography.fontWeight.medium,
   },
   hormonalCard: {
     backgroundColor: colors.background,
@@ -369,9 +645,19 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: spacing.sm,
   },
+  sourceItemContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+    gap: spacing.sm,
+  },
   sourceItem: {
     fontSize: typography.fontSize.sm,
     color: colors.textSecondary,
-    marginBottom: spacing.xs,
+    flex: 1,
+  },
+  sourceItemLink: {
+    color: colors.primary,
+    textDecorationLine: 'underline',
   },
 });
