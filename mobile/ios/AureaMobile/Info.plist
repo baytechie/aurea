@@ -35,8 +35,6 @@
 	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>Aurea uses the camera to scan food barcodes</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string></string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Aurea uses photos to log food items</string>
 	<key>RCTNewArchEnabled</key>

@@ -18,6 +18,11 @@ const queryClient = new QueryClient({
     queries: {
       retry: 2,
       staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
+      refetchOnWindowFocus: false, // Don't refetch when app comes to foreground
+      refetchOnReconnect: false, // Don't refetch on network reconnect
+      refetchOnMount: false, // Don't refetch when component mounts if data exists
+      refetchInterval: false, // No automatic polling
     },
   },
 });

@@ -1,8 +1,8 @@
 {
   "name": "AureaMobile",
   "displayName": "Aurea",
-  "version": "1.0.0",
-  "buildNumber": "1",
+  "version": "1.0.2",
+  "buildNumber": "3",
   "bundleIdentifier": "com.aurea.health",
   "description": "Personal health ingredient predictor - discover what your ingredients really do",
   "author": "Aurea Health",
@@ -17,7 +17,7 @@
   ],
   "ios": {
     "bundleIdentifier": "com.aurea.health",
-    "buildNumber": "1",
+    "buildNumber": "3",
     "supportsTablet": true,
     "deploymentTarget": "14.0",
     "infoPlist": {

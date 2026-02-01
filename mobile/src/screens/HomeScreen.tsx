@@ -21,6 +21,7 @@ export default function HomeScreen() {
   const {
     data: logs,
     isLoading: logsLoading,
+    isRefetching,
     refetch: refetchLogs,
   } = useQuery({
     queryKey: ['logs'],
@@ -51,7 +52,7 @@ export default function HomeScreen() {
       style={styles.container}
       refreshControl={
         <RefreshControl
-          refreshing={logsLoading}
+          refreshing={isRefetching}
           onRefresh={refetchLogs}
           tintColor={colors.primary}
         />

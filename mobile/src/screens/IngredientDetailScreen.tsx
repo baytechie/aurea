@@ -83,13 +83,14 @@ export default function IngredientDetailScreen() {
     return getScoreColor(effectiveScore);
   };
 
-  // For inflammation: display as anti-inflammatory score (100 - raw value)
+  // For inflammation: higher score = less inflammatory = better
+  // No inversion needed - database stores scores consistently (higher = better)
   const getInflammationDisplayScore = () => {
     const detail = getScoreDetail('inflammation');
     if (detail?.score !== undefined) {
-      return 100 - detail.score;
+      return detail.score;
     }
-    return 100 - (ingredient.inflammation_potential || 0);
+    return ingredient.inflammation_potential || 0;
   };
 
   const isTrusted = ingredient.is_trusted === 1;

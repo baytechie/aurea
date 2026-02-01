@@ -445,7 +445,7 @@ export default function ProfileScreen() {
           <Icon name="leaf" size={16} color={colors.primary} />
         </View>
         <Text style={styles.appName}>Aurea Health</Text>
-        <Text style={styles.version}>Version 1.0.1</Text>
+        <Text style={styles.version}>Version 1.0.2</Text>
       </View>
 
       <View style={{ height: 40 }} />

@@ -1,0 +1,27 @@
+# Matchfile for Aurea Health iOS App
+# For more information about Match, see:
+# https://docs.fastlane.tools/actions/match/
+
+# Git Repository URL for storing certificates
+# git_url("git@github.com:your-org/certificates.git")
+
+# Storage mode (git, google_cloud, s3)
+storage_mode("git")
+
+# App Identifier
+app_identifier(["com.aurea.health"])
+
+# Type of provisioning profile
+type("appstore") # Options: appstore, adhoc, development, enterprise
+
+# Your Apple ID
+username(ENV["APPLE_ID"] || "your-apple-id@example.com")
+
+# Team ID (optional)
+# team_id("ABCD1234EF")
+
+# Force overwrite existing profiles
+# force(true)
+
+# Readonly mode (don't create new certificates)
+# readonly(true)

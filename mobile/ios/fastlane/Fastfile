@@ -1,0 +1,174 @@
+# Fastfile for Aurea Health iOS App
+# Documentation: https://docs.fastlane.tools
+
+default_platform(:ios)
+
+platform :ios do
+
+  # =====================
+  # BEFORE ALL LANES
+  # =====================
+  before_all do
+    # Ensure we're on the right directory
+    ensure_git_status_clean unless ENV['SKIP_GIT_CHECK']
+  end
+
+  # =====================
+  # TESTFLIGHT DEPLOYMENT
+  # =====================
+  desc "Push a new beta build to TestFlight"
+  lane :beta do
+    # Increment build number automatically
+    increment_build_number(
+      xcodeproj: "AureaMobile.xcodeproj"
+    )
+
+    # Build the app
+    build_app(
+      workspace: "AureaMobile.xcworkspace",
+      scheme: "AureaMobile",
+      export_method: "app-store",
+      output_directory: "./build",
+      output_name: "AureaMobile.ipa",
+      clean: true
+    )
+
+    # Upload to TestFlight
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true,
+      apple_id: ENV['APPLE_ID'] || "YOUR_APP_APPLE_ID",
+      skip_submission: false,
+      distribute_external: false,
+      notify_external_testers: false
+    )
+
+    # Commit the version bump
+    commit_version_bump(
+      xcodeproj: "AureaMobile.xcodeproj",
+      message: "Bump build number for TestFlight [skip ci]"
+    )
+  end
+
+  # =====================
+  # TESTFLIGHT (MANUAL BUILD NUMBER)
+  # =====================
+  desc "Push to TestFlight without incrementing build number"
+  lane :upload do
+    # Build the app
+    build_app(
+      workspace: "AureaMobile.xcworkspace",
+      scheme: "AureaMobile",
+      export_method: "app-store",
+      output_directory: "./build",
+      output_name: "AureaMobile.ipa",
+      clean: true
+    )
+
+    # Upload to TestFlight
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true,
+      skip_submission: false,
+      distribute_external: false,
+      notify_external_testers: false
+    )
+  end
+
+  # =====================
+  # BUILD ONLY
+  # =====================
+  desc "Build the app without uploading"
+  lane :build do
+    build_app(
+      workspace: "AureaMobile.xcworkspace",
+      scheme: "AureaMobile",
+      export_method: "app-store",
+      output_directory: "./build",
+      output_name: "AureaMobile.ipa",
+      clean: true
+    )
+  end
+
+  # =====================
+  # SYNC CERTIFICATES
+  # =====================
+  desc "Sync certificates and provisioning profiles"
+  lane :certificates do
+    match(
+      type: "appstore",
+      readonly: true
+    )
+  end
+
+  # =====================
+  # REGISTER NEW DEVICE
+  # =====================
+  desc "Register a new device for development"
+  lane :register_device do |options|
+    device_name = options[:name]
+    device_udid = options[:udid]
+
+    register_devices(
+      devices: {
+        device_name => device_udid
+      }
+    )
+
+    # Regenerate provisioning profiles
+    match(
+      type: "development",
+      force_for_new_devices: true
+    )
+  end
+
+  # =====================
+  # INCREMENT VERSION
+  # =====================
+  desc "Increment version number"
+  lane :bump_version do |options|
+    bump_type = options[:type] || "patch" # major, minor, patch
+
+    increment_version_number(
+      xcodeproj: "AureaMobile.xcodeproj",
+      bump_type: bump_type
+    )
+  end
+
+  # =====================
+  # APP STORE RELEASE
+  # =====================
+  desc "Deploy a new version to the App Store"
+  lane :release do
+    # Capture screenshots (optional)
+    # capture_screenshots
+
+    # Build
+    build_app(
+      workspace: "AureaMobile.xcworkspace",
+      scheme: "AureaMobile",
+      export_method: "app-store",
+      output_directory: "./build",
+      output_name: "AureaMobile.ipa",
+      clean: true
+    )
+
+    # Upload to App Store
+    upload_to_app_store(
+      skip_metadata: false,
+      skip_screenshots: true,
+      submit_for_review: false,
+      automatic_release: false
+    )
+  end
+
+  # =====================
+  # ERROR HANDLING
+  # =====================
+  error do |lane, exception|
+    # Notify on error (optional - add Slack notification)
+    # slack(
+    #   message: "Error in lane #{lane}: #{exception.message}",
+    #   success: false
+    # )
+  end
+
+end
