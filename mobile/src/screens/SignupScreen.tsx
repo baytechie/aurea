@@ -22,21 +22,35 @@ export default function SignupScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
   const { signup } = useAuth();
 
+  // Password requirements
+  const passwordRequirements = [
+    { key: 'length', met: password.length >= 8, text: 'At least 8 characters' },
+    { key: 'uppercase', met: /[A-Z]/.test(password), text: 'One uppercase letter' },
+    { key: 'lowercase', met: /[a-z]/.test(password), text: 'One lowercase letter' },
+    { key: 'number', met: /[0-9]/.test(password), text: 'One number' },
+  ];
+
+  const allRequirementsMet = passwordRequirements.every(req => req.met);
+  const passwordsMatch = password === confirmPassword && confirmPassword.length > 0;
+
   const handleSignup = async () => {
-    if (!email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
+    setAttemptedSubmit(true);
+
+    if (!email) {
+      Alert.alert('Error', 'Please enter your email');
       return;
     }
 
-    if (password !== confirmPassword) {
+    if (!allRequirementsMet) {
+      Alert.alert('Error', 'Please meet all password requirements');
+      return;
+    }
+
+    if (!passwordsMatch) {
       Alert.alert('Error', 'Passwords do not match');
-      return;
-    }
-
-    if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
       return;
     }
 
@@ -63,9 +77,6 @@ export default function SignupScreen() {
         <View style={styles.content}>
           {/* Header */}
           <View style={styles.header}>
-            <View style={styles.iconContainer}>
-              <Icon name="person-add" size={32} color={colors.primary} />
-            </View>
             <Text style={styles.title}>Create Account</Text>
             <Text style={styles.subtitle}>
               Start your journey to better health
@@ -109,14 +120,14 @@ export default function SignupScreen() {
                 />
                 <TextInput
                   style={styles.input}
-                  placeholder="Minimum 6 characters"
+                  placeholder="Create a strong password"
                   placeholderTextColor={colors.textTertiary}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
                   autoComplete="new-password"
                   accessibilityLabel="Password input"
-                  accessibilityHint="Create a password with at least 6 characters"
+                  accessibilityHint="Create a password with at least 8 characters"
                 />
                 <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}
@@ -129,6 +140,34 @@ export default function SignupScreen() {
                     color={colors.textTertiary}
                   />
                 </TouchableOpacity>
+              </View>
+
+              {/* Password Requirements */}
+              <View style={styles.requirementsList}>
+                {passwordRequirements.map((req) => {
+                  // Show red if attempted submit and not met, or if user started typing and not met
+                  const showError = (attemptedSubmit || password.length > 0) && !req.met;
+                  const showSuccess = req.met;
+
+                  return (
+                    <View key={req.key} style={styles.requirementRow}>
+                      <Icon
+                        name={showSuccess ? 'checkmark-circle' : 'checkmark-circle-outline'}
+                        size={16}
+                        color={showSuccess ? colors.success : showError ? colors.error : colors.textTertiary}
+                      />
+                      <Text
+                        style={[
+                          styles.requirementText,
+                          showSuccess && styles.requirementMet,
+                          showError && styles.requirementNotMet,
+                        ]}
+                      >
+                        {req.text}
+                      </Text>
+                    </View>
+                  );
+                })}
               </View>
             </View>
 
@@ -164,6 +203,25 @@ export default function SignupScreen() {
                   />
                 </TouchableOpacity>
               </View>
+
+              {/* Password Match Indicator */}
+              {confirmPassword.length > 0 && (
+                <View style={styles.matchIndicator}>
+                  <Icon
+                    name={passwordsMatch ? 'checkmark-circle' : 'close-circle'}
+                    size={16}
+                    color={passwordsMatch ? colors.success : colors.error}
+                  />
+                  <Text
+                    style={[
+                      styles.matchText,
+                      passwordsMatch ? styles.matchSuccess : styles.matchError,
+                    ]}
+                  >
+                    {passwordsMatch ? 'Passwords match' : 'Passwords do not match'}
+                  </Text>
+                </View>
+              )}
             </View>
 
             <Button
@@ -224,15 +282,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing['2xl'],
   },
-  iconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: borderRadius.lg,
-    backgroundColor: colors.primaryBackground,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
-  },
   title: {
     fontSize: typography.fontSize['3xl'],
     fontWeight: typography.fontWeight.bold,
@@ -276,6 +325,40 @@ const styles = StyleSheet.create({
   },
   eyeButton: {
     padding: spacing.sm,
+  },
+  requirementsList: {
+    marginTop: spacing.md,
+    gap: spacing.xs,
+  },
+  requirementRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  requirementText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textTertiary,
+  },
+  requirementMet: {
+    color: colors.success,
+  },
+  requirementNotMet: {
+    color: colors.error,
+  },
+  matchIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+    gap: spacing.xs,
+  },
+  matchText: {
+    fontSize: typography.fontSize.sm,
+  },
+  matchSuccess: {
+    color: colors.success,
+  },
+  matchError: {
+    color: colors.error,
   },
   signupButton: {
     marginTop: spacing.md,

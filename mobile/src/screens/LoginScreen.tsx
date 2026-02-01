@@ -51,9 +51,6 @@ export default function LoginScreen() {
         <View style={styles.content}>
           {/* Header */}
           <View style={styles.header}>
-            <View style={styles.iconContainer}>
-              <Icon name="leaf" size={32} color={colors.primary} />
-            </View>
             <Text style={styles.title}>Welcome Back</Text>
             <Text style={styles.subtitle}>
               Log in to continue tracking your health journey
@@ -173,15 +170,6 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     marginBottom: spacing['2xl'],
-  },
-  iconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: borderRadius.lg,
-    backgroundColor: colors.primaryBackground,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
   },
   title: {
     fontSize: typography.fontSize['3xl'],

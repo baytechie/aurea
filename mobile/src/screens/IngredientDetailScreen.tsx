@@ -10,10 +10,10 @@ import { useQuery } from '@tanstack/react-query';
 import { RouteProp, useRoute } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { ingredientsApi } from '../lib/api';
-import { RootStackParamList } from '../navigation/RootNavigator';
+import { HomeStackParamList } from '../navigation/RootNavigator';
 import { colors, typography, spacing, borderRadius, getScoreColor } from '../theme';
 
-type RouteProps = RouteProp<RootStackParamList, 'IngredientDetail'>;
+type RouteProps = RouteProp<HomeStackParamList, 'IngredientDetail'>;
 
 export default function IngredientDetailScreen() {
   const route = useRoute<RouteProps>();

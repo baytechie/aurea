@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,12 +8,15 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Keyboard,
 } from 'react-native';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import Icon from 'react-native-vector-icons/Ionicons';
 import Slider from '@react-native-community/slider';
-import { logsApi } from '../lib/api';
-import { colors, typography, spacing, borderRadius } from '../theme';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import debounce from 'lodash/debounce';
+import { logsApi, ingredientsApi } from '../lib/api';
+import { colors, typography, spacing, borderRadius, shadows } from '../theme';
 
 const CYCLE_PHASES = ['menstruation', 'follicular', 'ovulation', 'luteal'];
 
@@ -25,9 +28,21 @@ const SYMPTOMS = [
   { key: 'sleep', label: 'Sleep', icon: 'moon' },
 ];
 
+// Common foods for quick suggestions when input is empty
+const QUICK_ADD_FOODS = [
+  'Eggs', 'Oatmeal', 'Banana', 'Chicken', 'Rice',
+  'Salad', 'Coffee', 'Yogurt', 'Avocado', 'Bread',
+];
+
+const HISTORY_STORAGE_KEY = '@aurea_food_history';
+const MAX_HISTORY_ITEMS = 20;
+
 export default function LogScreen() {
   const [ingredients, setIngredients] = useState<string[]>([]);
   const [ingredientInput, setIngredientInput] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [recentFoods, setRecentFoods] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [symptoms, setSymptoms] = useState<Record<string, number>>({
     energy: 3,
     bloating: 0,
@@ -39,11 +54,70 @@ export default function LogScreen() {
 
   const queryClient = useQueryClient();
 
+  // Load food history on mount
+  useEffect(() => {
+    loadFoodHistory();
+  }, []);
+
+  const loadFoodHistory = async () => {
+    try {
+      const history = await AsyncStorage.getItem(HISTORY_STORAGE_KEY);
+      if (history) {
+        setRecentFoods(JSON.parse(history));
+      }
+    } catch (error) {
+      console.log('Error loading food history:', error);
+    }
+  };
+
+  const saveFoodHistory = async (newFoods: string[]) => {
+    try {
+      // Merge with existing and dedupe, keeping most recent first
+      const existingHistory = [...recentFoods];
+      const updatedHistory = [...new Set([...newFoods, ...existingHistory])]
+        .slice(0, MAX_HISTORY_ITEMS);
+      await AsyncStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updatedHistory));
+      setRecentFoods(updatedHistory);
+    } catch (error) {
+      console.log('Error saving food history:', error);
+    }
+  };
+
+  // Search for ingredient suggestions
+  const { data: searchResults, isLoading: isSearching } = useQuery({
+    queryKey: ['ingredientSearch', searchTerm],
+    queryFn: () => ingredientsApi.search(searchTerm),
+    enabled: searchTerm.length >= 2,
+  });
+
+  // Create debounced search function with useRef to avoid hook issues
+  const debouncedSearchRef = useRef(
+    debounce((text: string) => {
+      setSearchTerm(text);
+    }, 300)
+  );
+
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    const debouncedFn = debouncedSearchRef.current;
+    return () => {
+      debouncedFn.cancel();
+    };
+  }, []);
+
+  const handleInputChange = (text: string) => {
+    setIngredientInput(text);
+    setShowSuggestions(true);
+    debouncedSearchRef.current(text);
+  };
+
   const mutation = useMutation({
     mutationFn: logsApi.createLog,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['logs'] });
       Alert.alert('Success', 'Your daily log has been saved!');
+      // Save foods to history before clearing
+      saveFoodHistory(ingredients);
       setIngredients([]);
       setSymptoms({ energy: 3, bloating: 0, focus: 3, mood: 3, sleep: 3 });
       setCyclePhase(undefined);
@@ -53,12 +127,16 @@ export default function LogScreen() {
     },
   });
 
-  const addIngredient = () => {
-    const trimmed = ingredientInput.trim().toLowerCase();
-    if (trimmed && !ingredients.includes(trimmed)) {
-      setIngredients([...ingredients, trimmed]);
-      setIngredientInput('');
+  const addIngredient = (name?: string) => {
+    const toAdd = name || ingredientInput.trim();
+    const normalized = toAdd.toLowerCase();
+    if (normalized && !ingredients.includes(normalized)) {
+      setIngredients([...ingredients, normalized]);
     }
+    setIngredientInput('');
+    setSearchTerm('');
+    setShowSuggestions(false);
+    Keyboard.dismiss();
   };
 
   const removeIngredient = (ing: string) => {
@@ -78,42 +156,225 @@ export default function LogScreen() {
     });
   };
 
+  // Filter suggestions to not show already added items
+  const filteredSuggestions = (searchResults || [])
+    .filter((item: any) => !ingredients.includes(item.name.toLowerCase()))
+    .slice(0, 6);
+
+  // Get recent foods not already added
+  const availableRecentFoods = recentFoods
+    .filter(food => !ingredients.includes(food.toLowerCase()))
+    .slice(0, 8);
+
+  // Get quick add foods not already added
+  const availableQuickFoods = QUICK_ADD_FOODS
+    .filter(food => !ingredients.includes(food.toLowerCase()))
+    .slice(0, 10);
+
+  // Match input to available foods for inline suggestions
+  const matchingFoods = ingredientInput.length >= 1
+    ? [...recentFoods, ...QUICK_ADD_FOODS]
+        .filter(food =>
+          food.toLowerCase().startsWith(ingredientInput.toLowerCase()) &&
+          !ingredients.includes(food.toLowerCase())
+        )
+        .slice(0, 5)
+    : [];
+
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.container}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+    >
       {/* Ingredients Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>What did you eat today?</Text>
 
+        {/* Input Row */}
         <View style={styles.inputRow}>
-          <TextInput
-            style={styles.input}
-            placeholder="Add ingredient..."
-            placeholderTextColor={colors.textTertiary}
-            value={ingredientInput}
-            onChangeText={setIngredientInput}
-            onSubmitEditing={addIngredient}
-            autoCapitalize="none"
-          />
-          <TouchableOpacity style={styles.addButton} onPress={addIngredient}>
+          <View style={styles.inputContainer}>
+            <Icon name="search" size={18} color={colors.textTertiary} style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Search or type food..."
+              placeholderTextColor={colors.textTertiary}
+              value={ingredientInput}
+              onChangeText={handleInputChange}
+              onSubmitEditing={() => addIngredient()}
+              onFocus={() => setShowSuggestions(true)}
+              autoCapitalize="none"
+              returnKeyType="done"
+            />
+            {ingredientInput.length > 0 && (
+              <TouchableOpacity
+                onPress={() => {
+                  setIngredientInput('');
+                  setSearchTerm('');
+                }}
+                style={styles.clearInput}
+              >
+                <Icon name="close-circle" size={18} color={colors.textTertiary} />
+              </TouchableOpacity>
+            )}
+          </View>
+          <TouchableOpacity
+            style={[
+              styles.addButton,
+              !ingredientInput.trim() && styles.addButtonDisabled
+            ]}
+            onPress={() => addIngredient()}
+            disabled={!ingredientInput.trim()}
+          >
             <Icon name="add" size={24} color={colors.white} />
           </TouchableOpacity>
         </View>
 
-        <View style={styles.tagsContainer}>
-          {ingredients.map((ing, idx) => (
-            <View key={idx} style={styles.tag}>
-              <Text style={styles.tagText}>{ing}</Text>
-              <TouchableOpacity onPress={() => removeIngredient(ing)}>
-                <Icon name="close" size={16} color={colors.primary} />
+        {/* Live Suggestions Dropdown */}
+        {showSuggestions && ingredientInput.length >= 2 && (
+          <View style={styles.suggestionsDropdown}>
+            {isSearching ? (
+              <View style={styles.searchingContainer}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={styles.searchingText}>Searching...</Text>
+              </View>
+            ) : filteredSuggestions.length > 0 ? (
+              <>
+                <Text style={styles.suggestionsHeader}>Suggestions</Text>
+                {filteredSuggestions.map((item: any, idx: number) => (
+                  <TouchableOpacity
+                    key={`${item.name}-${idx}`}
+                    style={styles.suggestionItem}
+                    onPress={() => addIngredient(item.name)}
+                  >
+                    <Icon name="leaf-outline" size={16} color={colors.primary} />
+                    <Text style={styles.suggestionText}>{item.name}</Text>
+                    <Icon name="add-circle-outline" size={20} color={colors.primary} />
+                  </TouchableOpacity>
+                ))}
+              </>
+            ) : matchingFoods.length > 0 ? (
+              <>
+                <Text style={styles.suggestionsHeader}>Quick Add</Text>
+                {matchingFoods.map((food, idx) => (
+                  <TouchableOpacity
+                    key={`match-${food}-${idx}`}
+                    style={styles.suggestionItem}
+                    onPress={() => addIngredient(food)}
+                  >
+                    <Icon name="time-outline" size={16} color={colors.textTertiary} />
+                    <Text style={styles.suggestionText}>{food}</Text>
+                    <Icon name="add-circle-outline" size={20} color={colors.primary} />
+                  </TouchableOpacity>
+                ))}
+              </>
+            ) : (
+              <TouchableOpacity
+                style={styles.suggestionItem}
+                onPress={() => addIngredient()}
+              >
+                <Icon name="add-outline" size={16} color={colors.primary} />
+                <Text style={styles.suggestionText}>Add "{ingredientInput}"</Text>
+                <Icon name="arrow-forward" size={20} color={colors.primary} />
               </TouchableOpacity>
-            </View>
-          ))}
-          {ingredients.length === 0 && (
-            <Text style={styles.hint}>
-              Type ingredient names and press enter to add
+            )}
+          </View>
+        )}
+
+        {/* Selected Ingredients */}
+        {ingredients.length > 0 && (
+          <View style={styles.selectedContainer}>
+            <Text style={styles.selectedLabel}>
+              <Icon name="checkmark-circle" size={14} color={colors.success} /> Added ({ingredients.length})
             </Text>
-          )}
-        </View>
+            <View style={styles.tagsContainer}>
+              {ingredients.map((ing, idx) => (
+                <View key={idx} style={styles.tag}>
+                  <Text style={styles.tagText}>{ing}</Text>
+                  <TouchableOpacity
+                    onPress={() => removeIngredient(ing)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Icon name="close" size={16} color={colors.primary} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Recent Foods */}
+        {availableRecentFoods.length > 0 && !showSuggestions && (
+          <View style={styles.quickSection}>
+            <View style={styles.quickHeader}>
+              <Icon name="time-outline" size={16} color={colors.textSecondary} />
+              <Text style={styles.quickTitle}>Recent</Text>
+            </View>
+            <View style={styles.quickChips}>
+              {availableRecentFoods.map((food, idx) => (
+                <TouchableOpacity
+                  key={`recent-${food}-${idx}`}
+                  style={styles.quickChip}
+                  onPress={() => addIngredient(food)}
+                >
+                  <Text style={styles.quickChipText}>{food}</Text>
+                  <Icon name="add" size={14} color={colors.primary} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Quick Add Common Foods */}
+        {ingredients.length === 0 && availableRecentFoods.length === 0 && !showSuggestions && (
+          <View style={styles.quickSection}>
+            <View style={styles.quickHeader}>
+              <Icon name="flash-outline" size={16} color={colors.textSecondary} />
+              <Text style={styles.quickTitle}>Quick Add</Text>
+            </View>
+            <View style={styles.quickChips}>
+              {availableQuickFoods.map((food, idx) => (
+                <TouchableOpacity
+                  key={`quick-${food}-${idx}`}
+                  style={styles.quickChip}
+                  onPress={() => addIngredient(food)}
+                >
+                  <Text style={styles.quickChipText}>{food}</Text>
+                  <Icon name="add" size={14} color={colors.primary} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Common Foods Grid when user has added some but looking for more */}
+        {ingredients.length > 0 && availableQuickFoods.length > 0 && !showSuggestions && (
+          <View style={styles.quickSection}>
+            <View style={styles.quickHeader}>
+              <Icon name="add-circle-outline" size={16} color={colors.textSecondary} />
+              <Text style={styles.quickTitle}>Add More</Text>
+            </View>
+            <View style={styles.quickChips}>
+              {availableQuickFoods.slice(0, 6).map((food, idx) => (
+                <TouchableOpacity
+                  key={`more-${food}-${idx}`}
+                  style={styles.quickChipOutline}
+                  onPress={() => addIngredient(food)}
+                >
+                  <Text style={styles.quickChipOutlineText}>{food}</Text>
+                  <Icon name="add" size={14} color={colors.textSecondary} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Empty State Hint */}
+        {ingredients.length === 0 && !showSuggestions && availableRecentFoods.length === 0 && (
+          <Text style={styles.hint}>
+            Tap items above or search to add what you ate
+          </Text>
+        )}
       </View>
 
       {/* Symptoms Section */}
@@ -219,16 +480,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.md,
   },
-  input: {
+  inputContainer: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.base,
+    backgroundColor: colors.background,
+    paddingHorizontal: spacing.md,
+  },
+  inputIcon: {
+    marginRight: spacing.sm,
+  },
+  input: {
+    flex: 1,
     paddingVertical: spacing.md,
     fontSize: typography.fontSize.base,
-    backgroundColor: colors.background,
     color: colors.textPrimary,
+  },
+  clearInput: {
+    padding: spacing.xs,
   },
   addButton: {
     backgroundColor: colors.primary,
@@ -238,11 +510,70 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  addButtonDisabled: {
+    backgroundColor: colors.border,
+  },
+
+  // Suggestions Dropdown
+  suggestionsDropdown: {
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.md,
+    marginTop: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.sm,
+  },
+  suggestionsHeader: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.semiBold,
+    color: colors.textTertiary,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xs,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+    gap: spacing.md,
+  },
+  suggestionText: {
+    flex: 1,
+    fontSize: typography.fontSize.base,
+    color: colors.textPrimary,
+    textTransform: 'capitalize',
+  },
+  searchingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.lg,
+    gap: spacing.sm,
+  },
+  searchingText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
+  },
+
+  // Selected Tags
+  selectedContainer: {
+    marginTop: spacing.lg,
+  },
+  selectedLabel: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.medium,
+    color: colors.success,
+    marginBottom: spacing.sm,
+  },
   tagsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
-    marginTop: spacing.md,
   },
   tag: {
     flexDirection: 'row',
@@ -259,10 +590,63 @@ const styles = StyleSheet.create({
     textTransform: 'capitalize',
     fontWeight: typography.fontWeight.medium,
   },
+
+  // Quick Add Sections
+  quickSection: {
+    marginTop: spacing.lg,
+  },
+  quickHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  quickTitle: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.medium,
+    color: colors.textSecondary,
+  },
+  quickChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  quickChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primaryBackground,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+    gap: spacing.xs,
+  },
+  quickChipText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.primary,
+    fontWeight: typography.fontWeight.medium,
+  },
+  quickChipOutline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.xs,
+  },
+  quickChipOutlineText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
+  },
+
   hint: {
     fontSize: typography.fontSize.sm,
     color: colors.textTertiary,
     fontStyle: 'italic',
+    marginTop: spacing.md,
+    textAlign: 'center',
   },
   symptomRow: {
     flexDirection: 'row',

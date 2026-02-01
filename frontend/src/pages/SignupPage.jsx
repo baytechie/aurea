@@ -12,6 +12,8 @@ function SignupPage() {
 
   const { signup, isSigningUp, signupError } = useAuth();
 
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+
   const passwordRequirements = [
     { met: password.length >= 8, text: 'At least 8 characters' },
     { met: /[A-Z]/.test(password), text: 'One uppercase letter' },
@@ -24,6 +26,7 @@ function SignupPage() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setAttemptedSubmit(true);
     if (!allRequirementsMet || !passwordsMatch) return;
     signup(email, password);
   };
@@ -92,17 +95,22 @@ function SignupPage() {
                 </button>
               </div>
               <div className="mt-2 space-y-1">
-                {passwordRequirements.map((req, index) => (
-                  <div
-                    key={index}
-                    className={`flex items-center gap-2 text-sm ${
-                      req.met ? 'text-green-600' : 'text-gray-400'
-                    }`}
-                  >
-                    <Check className={`w-4 h-4 ${req.met ? 'opacity-100' : 'opacity-30'}`} />
-                    {req.text}
-                  </div>
-                ))}
+                {passwordRequirements.map((req, index) => {
+                  const showError = (attemptedSubmit || password.length > 0) && !req.met;
+                  const showSuccess = req.met;
+
+                  return (
+                    <div
+                      key={index}
+                      className={`flex items-center gap-2 text-sm ${
+                        showSuccess ? 'text-green-600' : showError ? 'text-red-500' : 'text-gray-400'
+                      }`}
+                    >
+                      <Check className={`w-4 h-4 ${showSuccess ? 'opacity-100' : showError ? 'opacity-100' : 'opacity-30'}`} />
+                      {req.text}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 

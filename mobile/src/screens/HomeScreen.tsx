@@ -58,19 +58,17 @@ export default function HomeScreen() {
       }
     >
       {/* Welcome Section */}
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <Text style={styles.greeting}>
-            {getGreeting()}, {user?.email?.split('@')[0] || 'there'}!
-          </Text>
-          <Text style={styles.date}>
-            {new Date().toLocaleDateString('en-US', {
-              weekday: 'long',
-              month: 'long',
-              day: 'numeric',
-            })}
-          </Text>
-        </View>
+      <View style={styles.welcomeSection}>
+        <Text style={styles.greeting}>
+          {getGreeting()}, {user?.email?.split('@')[0] || 'there'}!
+        </Text>
+        <Text style={styles.date}>
+          {new Date().toLocaleDateString('en-US', {
+            weekday: 'long',
+            month: 'long',
+            day: 'numeric',
+          })}
+        </Text>
       </View>
 
       {/* Quick Actions */}
@@ -220,28 +218,26 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  header: {
-    backgroundColor: colors.primary,
+  welcomeSection: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing['3xl'],
-  },
-  headerContent: {
-    gap: spacing.xs,
+    paddingTop: spacing.base,
+    paddingBottom: spacing.lg,
+    backgroundColor: colors.white,
   },
   greeting: {
-    fontSize: typography.fontSize['2xl'],
+    fontSize: typography.fontSize.xl,
     fontWeight: typography.fontWeight.bold,
-    color: colors.white,
+    color: colors.textPrimary,
   },
   date: {
     fontSize: typography.fontSize.sm,
-    color: 'rgba(255,255,255,0.8)',
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
   },
   quickActions: {
     flexDirection: 'row',
     paddingHorizontal: spacing.base,
-    marginTop: -spacing.xl,
+    paddingTop: spacing.base,
     gap: spacing.md,
   },
   actionCard: {
