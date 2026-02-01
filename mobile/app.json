@@ -1,0 +1,28 @@
+{
+  "name": "AureaMobile",
+  "displayName": "Aurea",
+  "version": "1.0.0",
+  "buildNumber": "1",
+  "bundleIdentifier": "com.aurea.health",
+  "description": "Personal health ingredient predictor - discover what your ingredients really do",
+  "author": "Aurea Health",
+  "license": "MIT",
+  "repository": "",
+  "keywords": [
+    "health",
+    "nutrition",
+    "ingredients",
+    "wellness",
+    "tracking"
+  ],
+  "ios": {
+    "bundleIdentifier": "com.aurea.health",
+    "buildNumber": "1",
+    "supportsTablet": true,
+    "deploymentTarget": "14.0",
+    "infoPlist": {
+      "NSCameraUsageDescription": "Aurea uses the camera to scan food barcodes",
+      "NSPhotoLibraryUsageDescription": "Aurea uses photos to log food items"
+    }
+  }
+}
