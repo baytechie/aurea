@@ -72,17 +72,18 @@ async def signup(user_data: UserCreate, db: Session = Depends(get_db)):
     - Creates new user account
     - Returns JWT token for immediate login
     """
-    # Check if email already exists
-    existing_user = db.query(User).filter(User.email == user_data.email).first()
+    # Check if email already exists (case-insensitive)
+    email_lower = user_data.email.lower()
+    existing_user = db.query(User).filter(User.email == email_lower).first()
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered"
         )
 
-    # Create new user
+    # Create new user (store email in lowercase)
     user = User(
-        email=user_data.email,
+        email=email_lower,
         password_hash=hash_password(user_data.password)
     )
     db.add(user)
@@ -107,8 +108,8 @@ async def login(credentials: UserLogin, db: Session = Depends(get_db)):
     - Validates credentials
     - Returns JWT token
     """
-    # Find user
-    user = db.query(User).filter(User.email == credentials.email).first()
+    # Find user (case-insensitive email lookup)
+    user = db.query(User).filter(User.email == credentials.email.lower()).first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
