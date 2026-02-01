@@ -3,8 +3,8 @@ Pydantic schemas for request/response validation.
 """
 
 from pydantic import BaseModel, EmailStr, Field, field_validator, ConfigDict
-from typing import Optional, List, Dict, Any, Union
-from datetime import date, datetime
+from typing import Optional, List, Dict, Any, Union, Annotated
+import datetime as dt  # Use alias to avoid field name conflicts
 from uuid import UUID
 
 
@@ -35,7 +35,7 @@ class UserResponse(BaseModel):
     """Schema for user info response."""
     id: UUID
     email: str
-    created_at: datetime
+    created_at: dt.datetime
 
     class Config:
         from_attributes = True
@@ -61,8 +61,8 @@ class UserProfileResponse(BaseModel):
     bio: Optional[str] = None
     profile_picture_url: Optional[str] = None
     cycle_enabled: bool = False
-    created_at: datetime
-    updated_at: Optional[datetime] = None
+    created_at: dt.datetime
+    updated_at: Optional[dt.datetime] = None
 
     class Config:
         from_attributes = True
@@ -196,12 +196,11 @@ class SymptomsOutput(BaseModel):
 
 class LogCreate(BaseModel):
     """Schema for creating a daily log."""
-    model_config = ConfigDict(coerce_numbers_to_str=False, arbitrary_types_allowed=True)
 
-    date: Optional[date] = None  # Defaults to today if not provided
+    date: Union[dt.date, None] = Field(default=None, description="Log date in YYYY-MM-DD format. Defaults to today if not provided.")
     ingredients: List[str]
     symptoms: SymptomsInput
-    cycle_phase: Optional[str] = None
+    cycle_phase: Union[str, None] = None
 
     @field_validator('cycle_phase')
     @classmethod
@@ -232,11 +231,11 @@ class LogUpdate(BaseModel):
 class LogResponse(BaseModel):
     """Schema for log response."""
     id: UUID
-    date: date
+    date: dt.date
     ingredients: List[str]
     symptoms: Union[SymptomsOutput, Dict[str, Optional[int]]]
     cycle_phase: Optional[str] = None
-    created_at: datetime
+    created_at: dt.datetime
 
     class Config:
         from_attributes = True
@@ -270,13 +269,13 @@ class PredictionCreate(BaseModel):
 class PredictionResponse(BaseModel):
     """Schema for prediction response."""
     id: UUID
-    predicted_date: Optional[date] = None
+    predicted_date: Optional[dt.date] = None
     ingredients: List[str]
     predicted_bloating_probability: Optional[float] = None
     predicted_symptoms: Optional[Dict[str, float]] = None
     confidence: Optional[str] = None
     interpretation: Optional[str] = None
-    created_at: datetime
+    created_at: dt.datetime
 
     class Config:
         from_attributes = True
@@ -327,8 +326,8 @@ class UserInsightCreate(BaseModel):
     sample_size: Optional[int] = Field(None, ge=0)
     p_value: Optional[float] = None
     insight_data: Optional[Dict[str, Any]] = None
-    valid_from: date
-    valid_until: date
+    valid_from: dt.date
+    valid_until: dt.date
 
 
 class UserInsightResponse(BaseModel):
@@ -341,9 +340,9 @@ class UserInsightResponse(BaseModel):
     confidence_level: Optional[str] = None
     sample_size: Optional[int] = None
     insight_data: Optional[Dict[str, Any]] = None
-    valid_from: date
-    valid_until: date
-    computed_at: datetime
+    valid_from: dt.date
+    valid_until: dt.date
+    computed_at: dt.datetime
     is_active: bool
 
     class Config:
@@ -376,7 +375,7 @@ class InsightsSummary(BaseModel):
     top_trigger_correlation: Optional[float] = None
     has_phase_patterns: bool = False
     has_lag_effects: bool = False
-    last_computed_at: Optional[datetime] = None
+    last_computed_at: Optional[dt.datetime] = None
     confidence_level: Optional[str] = None
 
 
@@ -387,7 +386,7 @@ class InsightsSummary(BaseModel):
 class SymptomAggregation(BaseModel):
     """Schema for symptom aggregation data."""
     period: str  # 'day', 'week', 'month'
-    date: date
+    date: dt.date
     avg_energy: Optional[float] = None
     avg_bloating: Optional[float] = None
     avg_focus: Optional[float] = None
@@ -400,8 +399,8 @@ class SymptomTrendResponse(BaseModel):
     """Schema for symptom trend response."""
     aggregations: List[SymptomAggregation]
     period: str
-    start_date: date
-    end_date: date
+    start_date: dt.date
+    end_date: dt.date
 
 
 # ============================================================
