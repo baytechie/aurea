@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     # Apple Sign-In
     # This is the bundle ID of the iOS app
     APPLE_CLIENT_ID: str = "com.aurea.health"
+    APPLE_TEAM_ID: str = "C6JY7JP728"  # Apple Developer Team ID
+    APPLE_KEY_ID: str = "N36FZ77BS5"   # Key ID from Apple Developer Portal
+    APPLE_PRIVATE_KEY_PATH: str = "./AuthKey_N36FZ77BS5.p8"  # Path to .p8 key file
 
     @field_validator('JWT_SECRET')
     @classmethod

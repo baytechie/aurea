@@ -1,0 +1,7 @@
+# Apple Sign-In keys
+*.p8
+
+# Environment files with secrets
+.env
+.env.local
+.env.production
