@@ -24,15 +24,17 @@ const CATEGORY_ICONS = {
  *
  * Displays detailed health impact information across 5 categories:
  * - Blood Sugar Impact
- * - Anti-inflammatory Score (inverted from DB inflammation_potential)
+ * - Anti-inflammatory Score (higher = less inflammatory = better)
  * - Gut Health Impact
  * - Disease Risk Profile
  * - Hormonal Impact
  *
+ * All scores use consistent semantics: higher = better.
+ *
  * @param {Object} props
  * @param {Object} props.categories - Category data object
  * @param {Object} props.categories.bloodSugar - Blood sugar impact data
- * @param {Object} props.categories.inflammation - Inflammation data (stored as potential, displayed inverted)
+ * @param {Object} props.categories.inflammation - Inflammation data (higher = less inflammatory = better)
  * @param {Object} props.categories.gut - Gut impact data
  * @param {Object} props.categories.hormonal - Hormonal relevance data
  * @param {Object} props.categories.diseaseLinks - Disease links data
@@ -89,23 +91,23 @@ export default function HealthBreakdown({ categories, sources }) {
           score={bloodSugar.score}
           confidenceLevel={bloodSugar.confidenceLevel}
           confidence={bloodSugar.confidence}
+          confidenceRationale={bloodSugar.confidenceRationale}
         />
       )}
 
-      {/* Anti-inflammatory Score (inverted from inflammation_potential) */}
+      {/* Anti-inflammatory Score (higher = less inflammatory = better) */}
       {inflammation?.score != null && (
         <CategorySection
-          title="Inflammation Potential"
-          displayLabel="Anti-inflammatory Score"
+          title="Anti-inflammatory Score"
           icon={CATEGORY_ICONS.inflammation}
           description={inflammation.description}
           defaultDescription="Higher score indicates less inflammatory potential"
           details={inflammation.details || []}
           score={inflammation.score}
-          invertDisplay={true}
           confidenceLevel={inflammation.confidenceLevel}
           confidence={inflammation.confidence}
-          helpText="Score shows anti-inflammatory potential. Higher is better."
+          confidenceRationale={inflammation.confidenceRationale}
+          helpText="Higher score means less inflammatory. Sugar scores low (25), Spinach scores high (88)."
         />
       )}
 
@@ -120,6 +122,7 @@ export default function HealthBreakdown({ categories, sources }) {
           score={gut.score}
           confidenceLevel={gut.confidenceLevel}
           confidence={gut.confidence}
+          confidenceRationale={gut.confidenceRationale}
         />
       )}
 
@@ -134,6 +137,7 @@ export default function HealthBreakdown({ categories, sources }) {
           score={diseaseLinks.score}
           confidenceLevel={diseaseLinks.confidenceLevel}
           confidence={diseaseLinks.confidence}
+          confidenceRationale={diseaseLinks.confidenceRationale}
         />
       )}
 
@@ -148,6 +152,7 @@ export default function HealthBreakdown({ categories, sources }) {
           score={hormonal.score}
           confidenceLevel={hormonal.confidenceLevel}
           confidence={hormonal.confidence}
+          confidenceRationale={hormonal.confidenceRationale}
         />
       )}
 

@@ -58,6 +58,7 @@ function ConfidenceBadge({ level }) {
  * @param {boolean} props.showScore - Whether to show score bar (default true)
  * @param {string} props.confidenceLevel - Confidence level (high, medium, low, emerging)
  * @param {number} props.confidence - Confidence percentage (0-100)
+ * @param {string} props.confidenceRationale - Explanation of confidence level
  * @param {boolean} props.invertDisplay - If true, display as inverted (for anti-inflammatory)
  * @param {string} props.displayLabel - Custom label for the display
  * @param {string} props.helpText - Optional help text to explain the metric
@@ -72,6 +73,7 @@ export default function CategorySection({
   showScore = true,
   confidenceLevel,
   confidence,
+  confidenceRationale,
   invertDisplay = false,
   displayLabel,
   helpText,
@@ -212,15 +214,25 @@ export default function CategorySection({
         </>
       )}
 
-      {/* Confidence percentage indicator (subtle) */}
-      {typeof confidence === 'number' && confidence > 0 && (
-        <div className="px-4 sm:px-5 py-2 bg-gray-50 border-t border-gray-100">
-          <div className="flex items-center justify-between text-xs text-gray-500">
-            <span>Research confidence</span>
-            <span className="font-medium">{confidence}%</span>
-          </div>
+      {/* Confidence percentage indicator with rationale */}
+      {(typeof confidence === 'number' && confidence > 0) || confidenceRationale ? (
+        <div className="px-4 sm:px-5 py-3 bg-gray-50 border-t border-gray-100">
+          {typeof confidence === 'number' && confidence > 0 && (
+            <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+              <span>Research confidence</span>
+              <span className="font-medium">
+                {confidence}%
+                {confidenceLevel && ` (${formatConfidenceLevel(confidenceLevel)})`}
+              </span>
+            </div>
+          )}
+          {confidenceRationale && (
+            <p className="text-xs text-gray-500 italic leading-relaxed">
+              {confidenceRationale}
+            </p>
+          )}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

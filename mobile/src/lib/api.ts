@@ -63,12 +63,15 @@ export interface AuthResponse {
   token: string;
 }
 
-// Health score detail with confidence information
+// Health score detail with confidence information and rich breakdown
 export interface HealthScoreDetail {
-  score: number;
-  confidence: number;
-  confidence_level: 'High' | 'Medium' | 'Low' | 'Emerging';
-  description: string;
+  score?: number;
+  description?: string;  // Main summary description
+  details?: string[];    // Bullet points explaining the impact
+  confidence?: number | string;  // Legacy field
+  confidence_score?: number;     // Numeric confidence (0-100)
+  confidence_level?: 'High' | 'Medium' | 'Low' | 'Emerging' | 'Strong' | 'Moderate' | 'Mixed';
+  confidence_rationale?: string; // Explanation of confidence level
 }
 
 // Nested health scores object

@@ -56,6 +56,42 @@ export const authApi = {
   },
 };
 
+/**
+ * @typedef {Object} HealthScoreDetail
+ * @property {number} [score] - Score from 0-100
+ * @property {string} [description] - Main summary description
+ * @property {string[]} [details] - Bullet points explaining the impact
+ * @property {number|string} [confidence] - Legacy confidence field
+ * @property {number} [confidence_score] - Numeric confidence (0-100)
+ * @property {'High'|'Medium'|'Low'|'Emerging'|'Strong'|'Moderate'|'Mixed'} [confidence_level] - Confidence level
+ * @property {string} [confidence_rationale] - Explanation of confidence level
+ */
+
+/**
+ * @typedef {Object} HealthScores
+ * @property {HealthScoreDetail} [blood_sugar]
+ * @property {HealthScoreDetail} [inflammation]
+ * @property {HealthScoreDetail} [gut_impact]
+ * @property {HealthScoreDetail} [disease_links]
+ * @property {HealthScoreDetail} [hormonal]
+ */
+
+/**
+ * @typedef {Object} IngredientScore
+ * @property {string} name - Ingredient name
+ * @property {number} blood_sugar_impact - Blood sugar impact score
+ * @property {number} inflammation_potential - Inflammation potential score
+ * @property {number} gut_impact - Gut impact score
+ * @property {number} overall_score - Overall health score
+ * @property {string} [category] - Ingredient category
+ * @property {number} [is_trusted] - 1 = researched, 0 = public sources
+ * @property {number} [disease_links] - Disease links score
+ * @property {HealthScores} [health_scores] - Nested health scores with rich details
+ * @property {Object} [hormonal_relevance] - Hormonal relevance data
+ * @property {'high'|'medium'|'low'} [evidence_confidence] - Evidence confidence level
+ * @property {Array<{name: string, url?: string}>} [sources] - Research sources
+ */
+
 // Ingredient API
 export const ingredientApi = {
   // Get full ingredient score

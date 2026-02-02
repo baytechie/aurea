@@ -159,14 +159,18 @@ function parseDetails(detailsData) {
 
 /**
  * Transform API response to component format with detailed health data.
+ * Handles both legacy format (*_details fields) and new format (health_scores object).
  */
 function transformIngredientData(data) {
-  // Parse detailed data from API
-  const bloodSugarDetails = parseDetails(data.blood_sugar_details);
-  const inflammationDetails = parseDetails(data.inflammation_details);
-  const gutDetails = parseDetails(data.gut_impact_details);
-  const diseaseLinksDetails = parseDetails(data.disease_links_details);
-  const hormonalData = parseDetails(data.hormonal_relevance);
+  // Try new nested health_scores format first, fallback to legacy *_details fields
+  const healthScores = data.health_scores || {};
+
+  // Parse detailed data from API (legacy format support)
+  const bloodSugarDetails = healthScores.blood_sugar || parseDetails(data.blood_sugar_details);
+  const inflammationDetails = healthScores.inflammation || parseDetails(data.inflammation_details);
+  const gutDetails = healthScores.gut_impact || parseDetails(data.gut_impact_details);
+  const diseaseLinksDetails = healthScores.disease_links || parseDetails(data.disease_links_details);
+  const hormonalData = healthScores.hormonal || parseDetails(data.hormonal_relevance);
 
   // Generate description based on score
   const scoreDescription =
@@ -191,8 +195,9 @@ function transformIngredientData(data) {
           bloodSugarDetails?.description ||
           'How this ingredient affects blood glucose levels and insulin response',
         confidenceLevel: bloodSugarDetails?.confidence_level,
-        confidence: bloodSugarDetails?.confidence,
-        details: [],
+        confidence: bloodSugarDetails?.confidence_score ?? bloodSugarDetails?.confidence,
+        confidenceRationale: bloodSugarDetails?.confidence_rationale,
+        details: bloodSugarDetails?.details || [],
       },
       inflammation: {
         // Note: Store raw value, CategorySection will handle inversion
@@ -201,8 +206,9 @@ function transformIngredientData(data) {
           inflammationDetails?.description ||
           'Potential to trigger or reduce inflammatory responses in the body',
         confidenceLevel: inflammationDetails?.confidence_level,
-        confidence: inflammationDetails?.confidence,
-        details: [],
+        confidence: inflammationDetails?.confidence_score ?? inflammationDetails?.confidence,
+        confidenceRationale: inflammationDetails?.confidence_rationale,
+        details: inflammationDetails?.details || [],
       },
       gut: {
         score: gutDetails?.score ?? data.gut_impact,
@@ -210,8 +216,9 @@ function transformIngredientData(data) {
           gutDetails?.description ||
           'Effect on digestive health, gut microbiome, and intestinal comfort',
         confidenceLevel: gutDetails?.confidence_level,
-        confidence: gutDetails?.confidence,
-        details: [],
+        confidence: gutDetails?.confidence_score ?? gutDetails?.confidence,
+        confidenceRationale: gutDetails?.confidence_rationale,
+        details: gutDetails?.details || [],
       },
       diseaseLinks: {
         score: diseaseLinksDetails?.score ?? data.disease_links,
@@ -219,8 +226,9 @@ function transformIngredientData(data) {
           diseaseLinksDetails?.description ||
           'Association with chronic disease risk based on scientific research',
         confidenceLevel: diseaseLinksDetails?.confidence_level,
-        confidence: diseaseLinksDetails?.confidence,
-        details: [],
+        confidence: diseaseLinksDetails?.confidence_score ?? diseaseLinksDetails?.confidence,
+        confidenceRationale: diseaseLinksDetails?.confidence_rationale,
+        details: diseaseLinksDetails?.details || [],
       },
       hormonal: {
         score: hormonalData?.score,
@@ -228,8 +236,14 @@ function transformIngredientData(data) {
           hormonalData?.description ||
           'Potential effects on hormonal balance and endocrine function',
         confidenceLevel: hormonalData?.confidence_level,
-        confidence: hormonalData?.confidence,
-        details: hormonalData?.details ? [hormonalData.details] : [],
+        confidence: hormonalData?.confidence_score ?? hormonalData?.confidence,
+        confidenceRationale: hormonalData?.confidence_rationale,
+        // Handle legacy format where details is a single string
+        details: Array.isArray(hormonalData?.details)
+          ? hormonalData.details
+          : hormonalData?.details
+            ? [hormonalData.details]
+            : [],
       },
       evidence: {
         confidence: data.evidence_confidence || 'Mixed Evidence',

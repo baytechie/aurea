@@ -363,7 +363,16 @@ function ExpandableScoreBar({
   onToggle?: () => void;
   displayLabel?: string;
 }) {
-  const hasDetail = detail?.description || detail?.confidence_level;
+  const hasDetail = detail?.description || detail?.details?.length || detail?.confidence_level;
+
+  // Get confidence score - handle both number and string formats
+  const getConfidenceScore = () => {
+    if (detail?.confidence_score) return detail.confidence_score;
+    if (typeof detail?.confidence === 'number') return detail.confidence;
+    return null;
+  };
+
+  const confidenceScore = getConfidenceScore();
 
   return (
     <View style={styles.scoreBar}>
@@ -407,9 +416,47 @@ function ExpandableScoreBar({
       <Text style={styles.scoreDescription}>{description}</Text>
 
       {/* Expanded Details */}
-      {isExpanded && detail?.description && (
+      {isExpanded && (
         <View style={styles.expandedDetails}>
-          <Text style={styles.expandedDetailsText}>{detail.description}</Text>
+          {/* Main description */}
+          {detail?.description && (
+            <Text style={styles.expandedDetailsText}>{detail.description}</Text>
+          )}
+
+          {/* Bullet point details */}
+          {detail?.details && detail.details.length > 0 && (
+            <View style={styles.bulletList}>
+              {detail.details.map((item, index) => (
+                <View key={index} style={styles.bulletItem}>
+                  <Text style={styles.bulletPoint}>•</Text>
+                  <Text style={styles.bulletText}>{item}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* Evidence Confidence Section */}
+          {(confidenceScore || detail?.confidence_rationale) && (
+            <View style={styles.confidenceSection}>
+              <View style={styles.confidenceHeader}>
+                <Text style={styles.confidenceTitle}>Evidence confidence:</Text>
+                {confidenceScore && (
+                  <Text style={styles.confidenceScoreText}>
+                    {confidenceScore}/100
+                    {detail?.confidence_level && ` (${detail.confidence_level})`}
+                  </Text>
+                )}
+              </View>
+              {detail?.confidence_rationale && (
+                <View style={styles.bulletItem}>
+                  <Text style={styles.bulletPoint}>•</Text>
+                  <Text style={styles.confidenceRationale}>
+                    {detail.confidence_rationale}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
         </View>
       )}
     </View>
@@ -570,6 +617,57 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.sm,
     color: colors.textSecondary,
     lineHeight: typography.fontSize.sm * 1.5,
+    marginBottom: spacing.sm,
+  },
+  bulletList: {
+    marginTop: spacing.sm,
+  },
+  bulletItem: {
+    flexDirection: 'row',
+    marginBottom: spacing.sm,
+    paddingRight: spacing.sm,
+  },
+  bulletPoint: {
+    fontSize: typography.fontSize.sm,
+    color: colors.primary,
+    marginRight: spacing.sm,
+    fontWeight: typography.fontWeight.bold,
+  },
+  bulletText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
+    flex: 1,
+    lineHeight: typography.fontSize.sm * 1.5,
+  },
+  confidenceSection: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+  },
+  confidenceHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  confidenceTitle: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.semiBold,
+    color: colors.textPrimary,
+  },
+  confidenceScoreText: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.medium,
+    color: colors.primary,
+  },
+  confidenceRationale: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textTertiary,
+    flex: 1,
+    lineHeight: typography.fontSize.sm * 1.4,
+    fontStyle: 'italic',
   },
   confidenceBadgeSmall: {
     paddingHorizontal: spacing.sm,
