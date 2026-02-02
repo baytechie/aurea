@@ -458,15 +458,27 @@ def _is_subsequence(query: str, ingredient: str) -> bool:
 def _build_health_score_detail(details: dict) -> HealthScoreDetail:
     """Build a HealthScoreDetail from a details dict.
 
-    Handles both the new format with confidence_level and legacy format.
+    Handles both the new rich format and legacy format.
+    New format includes: score, description, details (array), confidence_score,
+    confidence_level, confidence_rationale
     """
     if not details:
         return None
 
+    # Handle details field - can be string or array
+    details_list = details.get('details')
+    if isinstance(details_list, str):
+        # Convert single string to array
+        details_list = [details_list] if details_list else None
+
     return HealthScoreDetail(
         score=details.get('score'),
+        description=details.get('description'),
+        details=details_list,
         confidence=details.get('confidence_level') or details.get('confidence'),
-        description=details.get('description')
+        confidence_score=details.get('confidence_score') or details.get('confidence'),
+        confidence_level=details.get('confidence_level'),
+        confidence_rationale=details.get('confidence_rationale')
     )
 
 

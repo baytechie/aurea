@@ -105,10 +105,23 @@ class UserProfileResponse(BaseModel):
 # ============================================================
 
 class HealthScoreDetail(BaseModel):
-    """Schema for a single health score with confidence and description."""
+    """Schema for a single health score with confidence and detailed breakdown.
+
+    Supports rich detail display with:
+    - score: Numeric score (0-100, higher = better)
+    - description: Main summary description
+    - details: Array of bullet point explanations
+    - confidence_score: Numeric confidence (0-100)
+    - confidence_level: Text level (Strong, Moderate, Mixed, Emerging)
+    - confidence_rationale: Explanation of confidence assessment
+    """
     score: Optional[int] = None
-    confidence: Optional[str] = None  # "high", "medium", "low"
-    description: Optional[str] = None
+    description: Optional[str] = None  # Main description/summary
+    details: Optional[List[str]] = None  # Bullet points explaining the impact
+    confidence: Optional[str] = None  # Legacy: "high", "medium", "low"
+    confidence_score: Optional[int] = None  # Numeric confidence (0-100)
+    confidence_level: Optional[str] = None  # "Strong", "Moderate", "Mixed", "Emerging"
+    confidence_rationale: Optional[str] = None  # Explanation of confidence level
 
 
 class HealthScores(BaseModel):
