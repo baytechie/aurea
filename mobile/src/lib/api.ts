@@ -150,6 +150,27 @@ export interface CategoryInfo {
   count: number;
 }
 
+// Apple Sign-In request/response types
+export interface AppleUserInfo {
+  email?: string | null;
+  name?: string | null;
+}
+
+export interface AppleSignInPayload {
+  identity_token: string;
+  authorization_code?: string | null;
+  user?: AppleUserInfo | null;
+  nonce?: string | null;
+}
+
+export interface AppleAuthResponse {
+  user_id: string;
+  email: string;
+  token: string;
+  is_new_user: boolean;
+  auth_provider: string;
+}
+
 // Auth API
 export const authApi = {
   login: async (email: string, password: string): Promise<AuthResponse> => {
@@ -159,6 +180,12 @@ export const authApi = {
 
   signup: async (email: string, password: string): Promise<AuthResponse> => {
     const response = await api.post('/auth/signup', {email, password});
+    return response.data;
+  },
+
+  // Apple Sign-In
+  appleSignIn: async (data: AppleSignInPayload): Promise<AppleAuthResponse> => {
+    const response = await api.post('/auth/apple', data);
     return response.data;
   },
 
@@ -220,7 +247,7 @@ export const ingredientsApi = {
     if (options?.offset) {
       params.offset = options.offset;
     }
-    const response = await api.get('/ingredients', {params});
+    const response = await api.get('/ingredients/list', {params});
     const results = (response.data.results || []).map((item: any) => ({
       ...item,
       name: item.ingredient_name || item.name,

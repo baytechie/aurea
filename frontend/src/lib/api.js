@@ -92,13 +92,13 @@ export const ingredientApi = {
     if (options.offset) {
       params.offset = options.offset;
     }
-    const response = await api.get('/ingredient/list', { params });
+    const response = await api.get('/ingredients/list', { params });
     return response.data;
   },
 
   // Get list of available categories
   getCategories: async () => {
-    const response = await api.get('/ingredient/categories');
+    const response = await api.get('/ingredients/categories');
     return response.data;
   },
 };
