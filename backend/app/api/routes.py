@@ -27,6 +27,7 @@ from app.models.database import User, UserLog, IngredientScore, Prediction, User
 from app.api.schemas import (
     UserCreate, UserLogin, AuthResponse, UserResponse,
     UserProfileUpdate, UserProfileResponse,
+    AppleSignInRequest, AppleSignInResponse,
     IngredientScoreResponse, IngredientSearchResult, IngredientSearchResponse,
     IngredientDetailedResponse, IngredientListItem, IngredientListResponse,
     HealthScores, HealthScoreDetail,
@@ -36,6 +37,7 @@ from app.api.schemas import (
     UserInsightResponse,
     HealthResponse
 )
+from app.core.apple_auth import verify_apple_token
 from app.services.ingredient_scorer import IngredientScorer
 from app.services.ml_predictor import PersonalPredictorModel
 from app.services.analysis_engine import InsightEngine
@@ -118,6 +120,13 @@ async def login(credentials: UserLogin, db: Session = Depends(get_db)):
             detail="Invalid email or password"
         )
 
+    # Check if user has a password (social login users may not)
+    if not user.password_hash:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="This account uses Apple Sign-In. Please use the Apple button to log in."
+        )
+
     # Verify password
     if not verify_password(credentials.password, user.password_hash):
         raise HTTPException(
@@ -132,6 +141,105 @@ async def login(credentials: UserLogin, db: Session = Depends(get_db)):
         user_id=user.id,
         email=user.email,
         token=token
+    )
+
+
+@router.post("/auth/apple", response_model=AppleSignInResponse, tags=["Auth"])
+async def apple_sign_in(request: AppleSignInRequest, db: Session = Depends(get_db)):
+    """
+    Authenticate with Apple Sign-In.
+
+    This endpoint handles both new user registration and existing user login
+    via Apple Sign-In.
+
+    Flow:
+    1. Verify the identity token from Apple
+    2. Check if user exists by Apple user ID
+    3. If not, check if user exists by email (for account linking)
+    4. Create new user or update existing user
+    5. Return JWT token
+
+    Note: Apple only provides user info (name, email) on the first sign-in.
+    Store this information immediately as it won't be available again.
+    """
+    # Verify the Apple identity token
+    apple_payload = verify_apple_token(request.identity_token)
+
+    # Get the Apple user ID (stable, unique identifier)
+    apple_user_id = apple_payload.sub
+
+    # Get email - from token or from user info (first sign-in only)
+    email = apple_payload.email
+    if not email and request.user:
+        email = request.user.email
+
+    # Get name from user info (first sign-in only)
+    name = None
+    if request.user and request.user.name:
+        name = request.user.name
+
+    is_new_user = False
+
+    # First, try to find user by Apple user ID
+    user = db.query(User).filter(User.apple_user_id == apple_user_id).first()
+
+    if user:
+        # Existing Apple user - just log them in
+        pass
+    else:
+        # New Apple sign-in - check if email exists (account linking)
+        if email:
+            email_lower = email.lower()
+            user = db.query(User).filter(User.email == email_lower).first()
+
+            if user:
+                # Link existing email account to Apple
+                user.apple_user_id = apple_user_id
+                user.auth_provider = "apple"  # Update to Apple as primary
+                # Update name if provided and user doesn't have one
+                if name and not user.name:
+                    user.name = name
+                db.commit()
+                db.refresh(user)
+            else:
+                # Create new user with Apple credentials
+                is_new_user = True
+                user = User(
+                    email=email_lower,
+                    apple_user_id=apple_user_id,
+                    auth_provider="apple",
+                    name=name,
+                    password_hash=None  # No password for Apple users
+                )
+                db.add(user)
+                db.commit()
+                db.refresh(user)
+        else:
+            # No email provided by Apple (user chose to hide it)
+            # We need to create a placeholder email or handle this case
+            # Using Apple ID as part of email for uniqueness
+            placeholder_email = f"apple_{apple_user_id[:8]}@privaterelay.appleid.com"
+            is_new_user = True
+            user = User(
+                email=placeholder_email,
+                apple_user_id=apple_user_id,
+                auth_provider="apple",
+                name=name,
+                password_hash=None
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+
+    # Generate JWT token
+    token = create_access_token({"sub": str(user.id), "email": user.email})
+
+    return AppleSignInResponse(
+        user_id=user.id,
+        email=user.email,
+        token=token,
+        is_new_user=is_new_user,
+        auth_provider="apple"
     )
 
 

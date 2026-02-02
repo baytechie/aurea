@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     RATE_LIMIT_PER_MINUTE: int = 60
     LOGIN_RATE_LIMIT_PER_MINUTE: int = 5  # Stricter for auth endpoints
 
+    # Apple Sign-In
+    # This is the bundle ID of the iOS app
+    APPLE_CLIENT_ID: str = "com.aurea.health"
+
     @field_validator('JWT_SECRET')
     @classmethod
     def validate_jwt_secret(cls, v, info):

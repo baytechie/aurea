@@ -31,6 +31,38 @@ class AuthResponse(BaseModel):
     token: str
 
 
+# ============================================================
+# Apple Sign-In Schemas
+# ============================================================
+
+class AppleUserInfo(BaseModel):
+    """User info provided by Apple (only on first sign-in)."""
+    email: Optional[str] = None
+    name: Optional[str] = None
+
+
+class AppleSignInRequest(BaseModel):
+    """Schema for Apple Sign-In request.
+
+    The identity_token is a JWT from Apple that contains the user's
+    Apple ID and email. The user info is only provided on the first
+    sign-in attempt.
+    """
+    identity_token: str  # JWT from Apple
+    authorization_code: Optional[str] = None  # Auth code (for server-to-server if needed)
+    user: Optional[AppleUserInfo] = None  # Only provided on first sign-in
+    nonce: Optional[str] = None  # For additional security validation
+
+
+class AppleSignInResponse(BaseModel):
+    """Schema for Apple Sign-In response."""
+    user_id: UUID
+    email: str
+    token: str
+    is_new_user: bool  # True if this is a new account
+    auth_provider: str = "apple"
+
+
 class UserResponse(BaseModel):
     """Schema for user info response."""
     id: UUID

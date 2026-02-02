@@ -23,20 +23,23 @@ platform :ios do
       xcodeproj: "AureaMobile.xcodeproj"
     )
 
-    # Build the app
+    # Build the app with automatic signing
     build_app(
       workspace: "AureaMobile.xcworkspace",
       scheme: "AureaMobile",
       export_method: "app-store",
       output_directory: "./build",
       output_name: "AureaMobile.ipa",
-      clean: true
+      clean: true,
+      export_options: {
+        signingStyle: "automatic",
+        teamID: "C6JY7JP728"
+      }
     )
 
     # Upload to TestFlight
     upload_to_testflight(
       skip_waiting_for_build_processing: true,
-      apple_id: ENV['APPLE_ID'] || "YOUR_APP_APPLE_ID",
       skip_submission: false,
       distribute_external: false,
       notify_external_testers: false

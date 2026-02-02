@@ -88,7 +88,12 @@ class User(Base):
 
     id = Column(GUID(), primary_key=True, default=uuid.uuid4)
     email = Column(String(255), unique=True, nullable=False, index=True)
-    password_hash = Column(String(255), nullable=False)
+    password_hash = Column(String(255), nullable=True)  # Nullable for social login users
+
+    # Social authentication fields
+    apple_user_id = Column(String(255), unique=True, nullable=True, index=True)
+    auth_provider = Column(String(50), default='email', nullable=False)
+    # Values: 'email', 'apple'
 
     # Profile fields (PRD enhancement)
     name = Column(String(100), nullable=True)
@@ -238,9 +243,9 @@ class IngredientScore(Base):
     category = Column(String(100), nullable=True, index=True)
 
     # Health impact scores (0-100 scale)
-    # Higher = better for most metrics, except inflammation (higher = more inflammatory)
-    blood_sugar_impact = Column(Integer, nullable=True)  # 0-100
-    inflammation_potential = Column(Integer, nullable=True)  # 0-100 (higher = more inflammatory)
+    # Higher = better for ALL metrics (consistent scoring)
+    blood_sugar_impact = Column(Integer, nullable=True)  # 0-100 (higher = less blood sugar spike = better)
+    inflammation_potential = Column(Integer, nullable=True)  # 0-100 (higher = less inflammatory = better)
     gut_impact = Column(Integer, nullable=True)  # 0-100
     disease_links = Column(Integer, nullable=True)  # 0-100 (higher = lower disease risk)
     overall_score = Column(Integer, nullable=True)  # 0-100

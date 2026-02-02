@@ -9,8 +9,10 @@ import {
   Platform,
   Alert,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { AppleButton } from '@invertase/react-native-apple-authentication';
 import { useAuth } from '../hooks/useAuth';
 import { colors, typography, spacing, borderRadius } from '../theme';
 import { Button } from '../components';
@@ -20,7 +22,8 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const [appleLoading, setAppleLoading] = useState(false);
+  const { login, loginWithApple, isAppleSignInAvailable } = useAuth();
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -140,13 +143,34 @@ export default function LoginScreen() {
             <View style={styles.dividerLine} />
           </View>
 
-          {/* Social Login Placeholder */}
-          <View style={styles.socialButtons}>
-            <TouchableOpacity style={styles.socialButton}>
-              <Icon name="logo-apple" size={20} color={colors.textPrimary} />
-              <Text style={styles.socialButtonText}>Continue with Apple</Text>
-            </TouchableOpacity>
-          </View>
+          {/* Apple Sign-In */}
+          {isAppleSignInAvailable && (
+            <View style={styles.socialButtons}>
+              {appleLoading ? (
+                <View style={styles.appleButtonLoading}>
+                  <ActivityIndicator size="small" color={colors.white} />
+                </View>
+              ) : (
+                <AppleButton
+                  buttonStyle={AppleButton.Style.BLACK}
+                  buttonType={AppleButton.Type.SIGN_IN}
+                  style={styles.appleButton}
+                  onPress={async () => {
+                    setAppleLoading(true);
+                    try {
+                      await loginWithApple();
+                    } catch (err: any) {
+                      if (err.message) {
+                        Alert.alert('Sign In Failed', err.message);
+                      }
+                    } finally {
+                      setAppleLoading(false);
+                    }
+                  }}
+                />
+              )}
+            </View>
+          )}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -245,19 +269,17 @@ const styles = StyleSheet.create({
   socialButtons: {
     gap: spacing.md,
   },
-  socialButton: {
-    flexDirection: 'row',
+  appleButton: {
+    width: '100%',
+    height: 50,
+    borderRadius: borderRadius.md,
+  },
+  appleButtonLoading: {
+    width: '100%',
+    height: 50,
+    backgroundColor: '#000000',
+    borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.base,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: borderRadius.md,
-    gap: spacing.md,
-  },
-  socialButtonText: {
-    fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.medium,
-    color: colors.textPrimary,
   },
 });
